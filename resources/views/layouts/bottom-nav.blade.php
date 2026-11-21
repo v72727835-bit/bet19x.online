@@ -1,34 +1,25 @@
-<nav class="sm:hidden fixed bottom-0 inset-x-0 z-50" style="background-color:#2A0A0A; border-top:1px solid #4A190B; border-radius:18px 18px 0 0; box-shadow: 0 -8px 24px -8px rgba(0,0,0,.5);">
-    <div class="grid grid-cols-5">
-        @php
-            $navItems = [
-                ['label' => 'Home', 'route' => 'dashboard', 'icon' => 'M3 12l9-9 9 9M5 10v10a1 1 0 001 1h4a1 1 0 001-1v-4h2v4a1 1 0 001 1h4a1 1 0 001-1V10'],
-                ['label' => 'Games', 'route' => null, 'icon' => 'M4 5h6v6H4V5zm10 0h6v6h-6V5zM4 15h6v6H4v-6zm10 0h6v6h-6v-6z'],
-                ['label' => 'Wallet', 'route' => 'wallet.index', 'icon' => 'M3 7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7zM16 12a1 1 0 100-2 1 1 0 000 2z'],
-                ['label' => 'Deposit', 'route' => 'wallet.deposit', 'icon' => 'M12 4v16m8-8H4'],
-                ['label' => auth()->check() ? 'Account' : 'Login', 'route' => auth()->check() ? 'profile.edit' : 'login', 'icon' => 'M5.121 17.804A9 9 0 1118.879 6.196 9 9 0 015.12 17.804zM12 11a3 3 0 100-6 3 3 0 000 6z'],
-            ];
-        @endphp
-        @foreach ($navItems as $item)
-            @php
-                $isActive = $item['route'] && request()->routeIs($item['route']);
-                $itemStyle = $isActive ? 'background-color:var(--fx-amber); border-radius:14px; margin:6px; box-shadow:0 0 14px 1px rgba(230,0,18,.55);' : '';
-                $col = $isActive ? '#FFFFFF' : '#C9A0A0';
-            @endphp
-            @if ($item['route'])
-                <a href="{{ route($item['route']) }}" class="flex flex-col items-center justify-center gap-1 py-2.5 transition-all duration-200" style="{{ $itemStyle }}">
-            @else
-                <button type="button" onclick="window.dispatchEvent(new CustomEvent('open-games-sidebar'))" class="flex flex-col items-center justify-center gap-1 py-2.5 transition-all duration-200" style="background:transparent; border:0;">
-            @endif
-                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="{{ $col }}" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="{{ $item['icon'] }}" />
-                </svg>
-                <span class="text-[10px]" style="color: {{ $col }}; font-family:'Rajdhani',sans-serif; font-weight:600;">{{ $item['label'] }}</span>
-            @if ($item['route'])
-                </a>
-            @else
-                </button>
-            @endif
-        @endforeach
-    </div>
+@php
+    $tabOn = fn ($name) => request()->routeIs($name) ? ' is-on' : '';
+@endphp
+<nav class="bx-tabbar" aria-label="Quick">
+    <a href="{{ route('dashboard') }}" class="bx-tab{{ $tabOn('dashboard') }}">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 11l9-8 9 8M5 9.5V20h5v-6h4v6h5V9.5"/></svg>
+        <span>Home</span>
+    </a>
+    <button type="button" class="bx-tab" onclick="window.dispatchEvent(new CustomEvent('open-games-sidebar'))">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg>
+        <span>Casino</span>
+    </button>
+    <a href="{{ route('wallet.deposit') }}" class="bx-tab bx-tab-chip" aria-label="Deposit">
+        <span class="bx-chip"><i>+</i></span>
+        <span>Deposit</span>
+    </a>
+    <a href="{{ route('wallet.index') }}" class="bx-tab{{ $tabOn('wallet.index') }}">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="13" rx="3"/><path stroke-linecap="round" d="M3 10h18M16 14.5h2"/></svg>
+        <span>Wallet</span>
+    </a>
+    <a href="{{ route('profile.edit') }}" class="bx-tab{{ $tabOn('profile.*') }}">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path stroke-linecap="round" d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>
+        <span>Account</span>
+    </a>
 </nav>
