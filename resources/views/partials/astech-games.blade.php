@@ -16,10 +16,11 @@
 #ag-root .ag-more{display:block;margin:16px auto 0;padding:10px 28px;border:0;border-radius:10px;background:linear-gradient(135deg,#ff4d8d,#ff2d6f);color:#fff;font-weight:700;font-size:15px;cursor:pointer}
 #ag-root .ag-msg{text-align:center;padding:14px;border-radius:10px;background:#7a1020;margin-bottom:12px}
 </style>
-<h3> Casino &amp; Games</h3>
+<h3>Casino &amp; Games</h3>
 @if(session('error'))<div class="ag-msg">{{ session('error') }}</div>@endif
 <div id="ag-err" class="ag-msg" style="display:none"></div>
 <div class="ag-bar"><input id="ag-q" type="search" placeholder="Search games..."><select id="ag-c"><option value="">All categories</option></select><select id="ag-p"><option value="">All providers</option></select></div>
+<div class="ag-chips" id="ag-chips"></div>
 <div class="ag-grid" id="ag-grid"></div>
 <button class="ag-more" id="ag-more" style="display:none">Load more</button>
 <script>
@@ -41,7 +42,7 @@
  var qs=new URLSearchParams(location.search);st.category=qs.get('category')||'';st.provider=qs.get('provider')||'';
  var cSel=document.getElementById('ag-c'),pSel=document.getElementById('ag-p');
  function syncSel(){cSel.value=st.category;pSel.value=st.provider}
- window.agSetFilter=function(cat,prov){st.category=cat||'';st.provider=prov||'';st.q='';document.getElementById('ag-q').value='';syncSel();load(true);document.getElementById('ag-root').scrollIntoView({behavior:'smooth',block:'start'})};
+ window.agSetFilter=function(cat,prov){st.category=cat||'';st.provider=prov||'';st.q='';document.getElementById('ag-q').value='';syncSel();Array.prototype.forEach.call(document.querySelectorAll('#ag-chips .ag-chip'),function(c){c.classList.toggle('on',!st.provider&&c.getAttribute('data-cat')===st.category)});load(true);document.getElementById('ag-root').scrollIntoView({behavior:'smooth',block:'start'})};
  more.onclick=function(){st.page++;load(false)};
  document.getElementById('ag-q').oninput=function(e){clearTimeout(tm);var v=e.target.value;tm=setTimeout(function(){st.q=v;load(true)},300)};
  document.getElementById('ag-c').onchange=function(e){st.category=e.target.value;load(true)};
@@ -50,6 +51,11 @@
   var cs=document.getElementById('ag-c');Object.keys(d.categories||{}).forEach(function(k){var o=document.createElement('option');o.value=k;o.textContent=k.replace(/_/g,' ').replace(/\b\w/g,function(m){return m.toUpperCase()})+' ('+d.categories[k]+')';cs.appendChild(o)});
   var sel=document.getElementById('ag-p');Object.keys(d.providers||{}).forEach(function(k){var o=document.createElement('option');o.value=k;o.textContent=k+' ('+d.providers[k]+')';sel.appendChild(o)});
  syncSel();
+  var ch=document.getElementById('ag-chips');
+  function ico(k){k=k.toLowerCase();return k.indexOf('slot')>-1?'\uD83C\uDFB0':k.indexOf('live')>-1?'\uD83D\uDCFA':(k.indexOf('card')>-1||k.indexOf('poker')>-1)?'\uD83C\uDCCF':k.indexOf('crash')>-1?'\uD83D\uDE80':k.indexOf('sport')>-1?'\u26BD':k.indexOf('fish')>-1?'\uD83D\uDC1F':(k.indexOf('roulette')>-1||k.indexOf('table')>-1)?'\uD83C\uDFA1':'\uD83C\uDFAE'}
+  function chip(txt,cat){var b=document.createElement('button');b.type='button';b.className='ag-chip'+((st.category||'')===cat&&!st.provider?' on':'');b.textContent=txt;b.onclick=function(){window.agSetFilter(cat,'')};b.setAttribute('data-cat',cat);ch.appendChild(b)}
+  chip('\uD83D\uDD25 All','');
+  Object.keys(d.categories||{}).forEach(function(k){chip(ico(k)+' '+k.replace(/_/g,' ').replace(/\b\w/g,function(m){return m.toUpperCase()}),k)});
  }).catch(function(){});
  load(true);
 })();
