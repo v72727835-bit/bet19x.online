@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Models\DepositRequest;
 use App\Models\Wallet;
 use App\Models\WalletTransaction;
 use Illuminate\Support\Str;
@@ -25,7 +26,10 @@ class WalletController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(10);
 
-        return view('wallet.index', compact('wallet', 'transactions'));
+        $depositRequests = DepositRequest::where('user_id', $user->id)
+            ->latest()->limit(10)->get();
+
+        return view('wallet.index', compact('wallet', 'transactions', 'depositRequests'));
     }
 
     /**
@@ -38,43 +42,36 @@ class WalletController extends Controller
 
     /**
      * Handle deposit request.
+     *
+     * Wallet is NOT credited here. A pending DepositRequest is created and the
+     * balance is added only when an admin approves it (Admin\WalletManagementController).
      */
     public function storeDeposit(Request $request)
     {
-        $request->validate([
-            'amount' => 'required|numeric|min:100',
+        $data = $request->validate([
+            'amount' => 'required|numeric|min:100|max:1000000',
             'payment_method' => 'required|in:upi,netbanking,card,wallet',
+            'reference_note' => 'nullable|string|max:100',
         ]);
 
         $user = Auth::user();
-        $wallet = $user->wallet ?? Wallet::firstOrCreate(['user_id' => $user->id]);
 
-        // Begin database transaction
-        DB::beginTransaction();
-        try {
-            // Add amount to deposit balance
-            $wallet->deposit_balance += $request->input('amount');
-            $wallet->save();
-
-            // Record transaction
-            WalletTransaction::create([
-                'wallet_id' => $wallet->id,
-                'type' => 'deposit',
-                'amount' => $request->input('amount'),
-                'description' => 'Deposit via ' . ucfirst($request->input('payment_method')),
-                'reference_id' => 'DEP_' . Str::upper(Str::random(8)),
-            ]);
-
-            DB::commit();
-
-            return redirect()->route('wallet.index')
-                ->with('status', 'Deposit of ₹' . number_format($request->input('amount'), 2) . ' successful!');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return redirect()->back()
-                ->withInput()
-                ->with('error', 'Transaction failed. Please try again.');
+        $pendingCount = DepositRequest::where('user_id', $user->id)->where('status', 'pending')->count();
+        if ($pendingCount >= 5) {
+            return redirect()->back()->withInput()
+                ->with('error', 'Aapki 5 deposit requests pehle se pending hain. Admin approval ka intezaar karein.');
         }
+
+        DepositRequest::create([
+            'user_id' => $user->id,
+            'amount' => round((float) $data['amount'], 2),
+            'method' => $data['payment_method'],
+            'reference_note' => $data['reference_note'] ?? null,
+            'status' => 'pending',
+        ]);
+
+        return redirect()->route('wallet.index')
+            ->with('status', 'Deposit request of ₹' . number_format((float) $data['amount'], 2) . ' submit ho gayi. Admin approve karega tab paisa wallet me add hoga.');
     }
 
     /**

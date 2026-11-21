@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\DepositRequest;
 use App\Models\User;
+use App\Models\Wallet;
 use App\Models\WalletTransaction;
 use App\Models\WithdrawalRequest;
 use Illuminate\Http\Request;
@@ -28,27 +29,38 @@ class WalletManagementController extends Controller
 
     public function approveDeposit(Request $request, DepositRequest $depositRequest)
     {
-        if ($depositRequest->status !== 'pending') {
-            return back()->with('status', 'Ye request pehle hi process ho chuki hai.');
-        }
+        $approved = DB::transaction(function () use ($request, $depositRequest) {
+            // Lock the row so a double-click / two admins can't credit twice.
+            $dep = DepositRequest::lockForUpdate()->find($depositRequest->id);
+            if (! $dep || $dep->status !== 'pending') {
+                return false;
+            }
 
-        DB::transaction(function () use ($request, $depositRequest) {
-            $wallet = $depositRequest->user->wallet;
-            $wallet->increment('deposit_balance', $depositRequest->amount);
+            $wallet = Wallet::lockForUpdate()->firstOrCreate(
+                ['user_id' => $dep->user_id],
+                ['deposit_balance' => 0, 'winnings_balance' => 0, 'bonus_balance' => 0]
+            );
+            $wallet->increment('deposit_balance', $dep->amount);
             $wallet->transactions()->create([
-                'type' => 'credit',
-                'amount' => $depositRequest->amount,
-                'description' => 'Deposit approved',
-                'reference_id' => (string) $depositRequest->id,
+                'type' => 'deposit',
+                'amount' => $dep->amount,
+                'description' => 'Deposit approved (' . $dep->method . ')',
+                'reference_id' => 'DEP_' . $dep->id,
             ]);
 
-            $depositRequest->update([
+            $dep->update([
                 'status' => 'approved',
                 'admin_remarks' => $request->admin_remarks,
                 'processed_by' => auth('admin')->id(),
                 'processed_at' => now(),
             ]);
+
+            return true;
         });
+
+        if (! $approved) {
+            return back()->with('status', 'Ye request pehle hi process ho chuki hai.');
+        }
 
         AuditLog::record('Wallet Management', 'Approve Deposit', "Deposit #{$depositRequest->id} approved");
 
@@ -58,6 +70,10 @@ class WalletManagementController extends Controller
     public function rejectDeposit(Request $request, DepositRequest $depositRequest)
     {
         $request->validate(['admin_remarks' => 'required|string|max:255']);
+
+        if ($depositRequest->status !== 'pending') {
+            return back()->with('status', 'Ye request pehle hi process ho chuki hai.');
+        }
 
         $depositRequest->update([
             'status' => 'rejected',

@@ -39,6 +39,9 @@
     <body class="font-sans antialiased" style="background-color: #0D0D0D;">
         <div class="min-h-screen" style="background-color: #0D0D0D;">
             @include('layouts.navigation')
+            @auth
+                @include('layouts.games-sidebar')
+            @endauth
 
             <!-- Page Heading -->
             @isset($header)

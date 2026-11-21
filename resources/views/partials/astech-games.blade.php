@@ -38,6 +38,10 @@
    more.style.display=(st.page*d.per<d.total)?'block':'none';
    if(!d.total&&!d.error){g.innerHTML='<div style="grid-column:1/-1;text-align:center;color:#9aa0d8">Koi game nahi mila</div>'}
   }).catch(function(){err.textContent='Games load nahi hue, dobara try karein.';err.style.display='block'}).finally(function(){busy=false})}
+ var qs=new URLSearchParams(location.search);st.category=qs.get('category')||'';st.provider=qs.get('provider')||'';
+ var cSel=document.getElementById('ag-c'),pSel=document.getElementById('ag-p');
+ function syncSel(){cSel.value=st.category;pSel.value=st.provider}
+ window.agSetFilter=function(cat,prov){st.category=cat||'';st.provider=prov||'';st.q='';document.getElementById('ag-q').value='';syncSel();load(true);document.getElementById('ag-root').scrollIntoView({behavior:'smooth',block:'start'})};
  more.onclick=function(){st.page++;load(false)};
  document.getElementById('ag-q').oninput=function(e){clearTimeout(tm);var v=e.target.value;tm=setTimeout(function(){st.q=v;load(true)},300)};
  document.getElementById('ag-c').onchange=function(e){st.category=e.target.value;load(true)};
@@ -45,6 +49,7 @@
  fetch(M,{headers:{'Accept':'application/json'},credentials:'same-origin'}).then(function(r){return r.json()}).then(function(d){
   var cs=document.getElementById('ag-c');Object.keys(d.categories||{}).forEach(function(k){var o=document.createElement('option');o.value=k;o.textContent=k.replace(/_/g,' ').replace(/\b\w/g,function(m){return m.toUpperCase()})+' ('+d.categories[k]+')';cs.appendChild(o)});
   var sel=document.getElementById('ag-p');Object.keys(d.providers||{}).forEach(function(k){var o=document.createElement('option');o.value=k;o.textContent=k+' ('+d.providers[k]+')';sel.appendChild(o)});
+ syncSel();
  }).catch(function(){});
  load(true);
 })();
