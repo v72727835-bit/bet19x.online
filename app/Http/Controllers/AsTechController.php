@@ -19,7 +19,16 @@ class AsTechController extends Controller
             $error = $e->getMessage();
         }
         $pv = (string) request()->query('provider', '');
-        if ($pv !== '') { $want = array_map('strtolower', array_filter(explode('|', $pv))); $games = array_values(array_filter($games, function ($g) use ($want) { $k = strtolower((string) ($g['provider'] ?? '')); if (strpos($k, 'hd_') === 0) { $k = substr($k, 3); } return in_array($k, $want, true); })); }
+        if ($pv !== '') {
+            $want = array_map('strtolower', array_filter(explode('|', $pv)));
+            $games = array_values(array_filter($games, function ($g) use ($want) {
+                $k = strtolower((string) ($g['provider'] ?? ''));
+                if (strpos($k, 'hd_') === 0) {
+                    $k = substr($k, 3);
+                }
+                return in_array($k, $want, true);
+            }));
+        }
         return view('astech.games', compact('games', 'error'));
     }
 
@@ -127,6 +136,11 @@ class AsTechController extends Controller
                 $round = (string) ($p['round_id'] ?? ($p['roundId'] ?? ''));
                 $game  = (string) ($p['game_id'] ?? ($p['gameId'] ?? ''));
                 $cur   = strtoupper((string) ($p['currency'] ?? 'INR'));
+
+                if (! is_numeric($p['bet'] ?? 0) || ! is_numeric($p['win'] ?? 0)) return $this->fail('Invalid amount');
+                if ($bet < 0 || $win < 0) return $this->fail('Negative amount not allowed');
+                if ($bet > 10000000 || $win > 10000000) return $this->fail('Amount too large');
+                if ($cur !== strtoupper((string) config('astech.currency', 'INR'))) return $this->fail('Currency mismatch');
 
                 $r = $db->transaction(function () use ($db, $login, $txn, $bet, $win, $round, $game, $cur) {
                     $dup = $db->table('astech_bet_logs')->where('transaction_id', $txn)->first();

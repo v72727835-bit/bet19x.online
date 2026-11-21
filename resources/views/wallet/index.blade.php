@@ -11,6 +11,12 @@
                     </p>
                 </div>
                 <div class="p-6 space-y-6" style="background:#0F1023; border-radius:12px; color:#FFF0F5;">
+                    @if (session('status'))
+                        <div class="rounded-lg p-3 text-sm" style="background:rgba(52,211,153,.12); border:1px solid rgba(52,211,153,.4); color:#6EE7B7;">{{ session('status') }}</div>
+                    @endif
+                    @if (session('error'))
+                        <div class="rounded-lg p-3 text-sm" style="background:rgba(230,0,18,.12); border:1px solid rgba(230,0,18,.4); color:#FCA5A5;">{{ session('error') }}</div>
+                    @endif
                     <!-- Wallet Balances -->
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
                         <div class="border rounded-lg p-4" style="background:rgba(255,255,255,0.05); border-color:rgba(212,175,55,0.2);">
@@ -42,6 +48,27 @@
                             Withdraw
                         </a>
                     </div>
+
+                    <!-- Deposit Requests -->
+                    @if ($depositRequests->isNotEmpty())
+                        <div class="border-t border-gray-600 pt-5">
+                            <h2 class="text-lg font-medium text-gray-100">Deposit Requests</h2>
+                            <div class="mt-4 space-y-3">
+                                @foreach ($depositRequests as $dr)
+                                    @php
+                                        $c = $dr->status === 'approved' ? '#34D399' : ($dr->status === 'rejected' ? '#F87171' : '#FBBF24');
+                                    @endphp
+                                    <div class="border rounded-lg p-3 flex items-center justify-between" style="background:rgba(255,255,255,0.03); border-color:rgba(212,175,55,0.15);">
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-100">₹{{ number_format($dr->amount, 2) }} <span class="text-xs text-gray-400">via {{ strtoupper($dr->method) }}</span></p>
+                                            <p class="text-xs text-gray-500">{{ $dr->created_at->format('M d, Y H:i') }}@if($dr->status==='rejected' && $dr->admin_remarks) · {{ $dr->admin_remarks }}@endif</p>
+                                        </div>
+                                        <span class="text-xs font-semibold px-2 py-1 rounded-full" style="color:{{ $c }}; border:1px solid {{ $c }};">{{ $dr->status === 'pending' ? 'Pending approval' : ucfirst($dr->status) }}</span>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
 
                     <!-- Transaction History -->
                     <div class="border-t border-gray-600 pt-5">
@@ -88,7 +115,7 @@
                                         </div>
                                         <div class="text-right space-y-1">
                                             <p class="text-sm font-medium text-gray-100">
-                                                @if ($transaction->type == 'deposit')
+                                                @if (in_array($transaction->type, ['deposit','credit','refund']))
                                                     +₹{{ number_format($transaction->amount, 2) }} <span class="text-[#D4AF37]">(+)</span>
                                                 @else
                                                     -₹{{ number_format($transaction->amount, 2) }} <span class="text-[#FF4F9A]">(-)</span>
