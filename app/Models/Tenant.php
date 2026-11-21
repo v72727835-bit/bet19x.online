@@ -23,6 +23,27 @@ class Tenant extends Model
         'price' => 'decimal:2',
     ];
 
+    /**
+     * Store the tenant DB password encrypted. Reads fall back to the raw value so
+     * rows saved before encryption was introduced keep working.
+     */
+    protected function dbPassword(): \Illuminate\Database\Eloquent\Casts\Attribute
+    {
+        return \Illuminate\Database\Eloquent\Casts\Attribute::make(
+            get: function ($value) {
+                if ($value === null || $value === '') {
+                    return $value;
+                }
+                try {
+                    return \Illuminate\Support\Facades\Crypt::decryptString($value);
+                } catch (\Throwable $e) {
+                    return $value;
+                }
+            },
+            set: fn ($value) => ($value === null || $value === '') ? $value : \Illuminate\Support\Facades\Crypt::encryptString($value),
+        );
+    }
+
     public function isLicenseValid(): bool
     {
         return ! $this->license_expires_at || ! $this->license_expires_at->isPast();

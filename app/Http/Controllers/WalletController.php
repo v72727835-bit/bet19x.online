@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use App\Models\DepositRequest;
 use App\Models\Wallet;
 use App\Models\WalletTransaction;
+use App\Models\WithdrawalRequest;
 use Illuminate\Support\Str;
 
 class WalletController extends Controller
@@ -84,64 +85,59 @@ class WalletController extends Controller
 
     /**
      * Handle withdraw request.
+     *
+     * Only winnings are withdrawable (not deposits/bonus). The amount is held
+     * (deducted) atomically under a row lock and a pending WithdrawalRequest is
+     * created. Admin approval marks it paid; rejection refunds the held amount.
      */
     public function storeWithdraw(Request $request)
     {
-        $request->validate([
-            'amount' => 'required|numeric|min:100',
-            'bank_details' => 'required|string|min:10',
+        $data = $request->validate([
+            'amount' => 'required|numeric|min:100|max:1000000',
+            'bank_details' => 'required|string|min:10|max:500',
         ]);
 
         $user = Auth::user();
-        $wallet = $user->wallet;
+        $amount = round((float) $data['amount'], 2);
 
-        if (!$wallet) {
-            return redirect()->route('wallet.index')
-                ->with('error', 'Wallet not found.');
-        }
-
-        // Check sufficient balance (winnings + bonus)
-        $available_balance = $wallet->winnings_balance + $wallet->bonus_balance;
-        if ($request->input('amount') > $available_balance) {
-            return redirect()->back()
-                ->withInput()
-                ->with('error', 'Insufficient balance. You can withdraw up to ₹' . number_format($available_balance, 2));
-        }
-
-        // Begin database transaction
-        DB::beginTransaction();
         try {
-            // Deduct amount from winnings balance first, then bonus
-            $amountToWithdraw = $request->input('amount');
+            DB::transaction(function () use ($user, $amount, $data) {
+                $wallet = Wallet::where('user_id', $user->id)->lockForUpdate()->first();
+                if (! $wallet) {
+                    throw new \DomainException('Wallet not found.');
+                }
 
-            if ($wallet->winnings_balance >= $amountToWithdraw) {
-                $wallet->winnings_balance -= $amountToWithdraw;
-            } else {
-                $remaining = $amountToWithdraw - $wallet->winnings_balance;
-                $wallet->winnings_balance = 0;
-                $wallet->bonus_balance -= $remaining;
-            }
+                if ($amount > (float) $wallet->winnings_balance + 0.00001) {
+                    throw new \DomainException('Insufficient winnings balance. You can withdraw up to ₹'
+                        . number_format((float) $wallet->winnings_balance, 2));
+                }
 
-            $wallet->save();
+                $wallet->winnings_balance = round((float) $wallet->winnings_balance - $amount, 2);
+                $wallet->save();
 
-            // Record transaction
-            WalletTransaction::create([
-                'wallet_id' => $wallet->id,
-                'type' => 'withdrawal',
-                'amount' => $amountToWithdraw,
-                'description' => 'Withdrawal to bank account',
-                'reference_id' => 'WDL_' . Str::upper(Str::random(8)),
-            ]);
+                $req = WithdrawalRequest::create([
+                    'user_id' => $user->id,
+                    'amount' => $amount,
+                    'account_details' => $data['bank_details'],
+                    'status' => 'pending',
+                ]);
 
-            DB::commit();
-
-            return redirect()->route('wallet.index')
-                ->with('status', 'Withdrawal request of ₹' . number_format($amountToWithdraw, 2) . ' submitted successfully. Funds will be transferred to your bank account within 2-4 business hours.');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return redirect()->back()
-                ->withInput()
-                ->with('error', 'Withdrawal failed. Please try again.');
+                WalletTransaction::create([
+                    'wallet_id' => $wallet->id,
+                    'type' => 'withdrawal',
+                    'amount' => $amount,
+                    'description' => 'Withdrawal request (pending approval)',
+                    'reference_id' => 'WDL_' . $req->id,
+                ]);
+            });
+        } catch (\DomainException $e) {
+            return redirect()->back()->withInput()->with('error', $e->getMessage());
+        } catch (\Throwable $e) {
+            report($e);
+            return redirect()->back()->withInput()->with('error', 'Withdrawal failed. Please try again.');
         }
+
+        return redirect()->route('wallet.index')
+            ->with('status', 'Withdrawal request of ₹' . number_format($amount, 2) . ' submit ho gayi. Admin approve karega tab bank me transfer hoga.');
     }
 }

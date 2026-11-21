@@ -20,6 +20,11 @@ class EnsureAdminRole
             abort(403, 'Aapke role ko is section ki permission nahi hai.');
         }
 
+        if (! $admin->is_active) {
+            auth('admin')->logout();
+            abort(403, 'Aapka admin account deactivate kar diya gaya hai.');
+        }
+
         return $next($request);
     }
 }

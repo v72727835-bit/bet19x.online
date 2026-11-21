@@ -115,7 +115,7 @@
                                         </div>
                                         <div class="text-right space-y-1">
                                             <p class="text-sm font-medium text-gray-100">
-                                                @if (in_array($transaction->type, ['deposit','credit']))
+                                                @if (in_array($transaction->type, ['deposit','credit','refund']))
                                                     +₹{{ number_format($transaction->amount, 2) }} <span class="text-[#D4AF37]">(+)</span>
                                                 @else
                                                     -₹{{ number_format($transaction->amount, 2) }} <span class="text-[#FF4F9A]">(-)</span>

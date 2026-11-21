@@ -7,7 +7,7 @@
                         Withdraw Funds from Wallet
                     </h1>
                     <p class="mt-1 text-sm text-gray-600">
-                        Withdraw your winnings to your bank account.
+                        Sirf Winnings Balance withdraw ho sakta hai. Request admin approval ke baad process hogi.
                     </p>
                 </div>
                 <div class="p-6" style="background:#0F1023; border-radius:12px; color:#FFF0F5;">

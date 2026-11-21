@@ -40,13 +40,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
     Route::post('/logout', [App\Http\Controllers\Admin\Auth\AdminLoginController::class, 'logout'])->name('logout');
 
-    Route::middleware('auth:admin')->group(function () {
+    Route::middleware(['auth:admin', 'admin.role'])->group(function () {
         Route::get('/dashboard', function () {
             return view('admin.dashboard');
         })->name('dashboard');
 
-        Route::get('/settings', [App\Http\Controllers\Admin\SettingsController::class, 'edit'])->name('settings.edit');
-        Route::post('/settings', [App\Http\Controllers\Admin\SettingsController::class, 'update'])->name('settings.update');
+        Route::middleware('admin.role:super_admin,manager')->group(function () {
+            Route::get('/settings', [App\Http\Controllers\Admin\SettingsController::class, 'edit'])->name('settings.edit');
+            Route::post('/settings', [App\Http\Controllers\Admin\SettingsController::class, 'update'])->name('settings.update');
+        });
 
         Route::get('/menu', [App\Http\Controllers\Admin\MenuController::class, 'index'])->name('menu.index');
         Route::post('/menu', [App\Http\Controllers\Admin\MenuController::class, 'store'])->name('menu.store');
