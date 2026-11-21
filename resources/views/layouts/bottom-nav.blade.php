@@ -6,7 +6,7 @@
                 ['label' => 'Games', 'route' => null, 'icon' => 'M4 5h6v6H4V5zm10 0h6v6h-6V5zM4 15h6v6H4v-6zm10 0h6v6h-6v-6z'],
                 ['label' => 'Wallet', 'route' => 'wallet.index', 'icon' => 'M3 7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7zM16 12a1 1 0 100-2 1 1 0 000 2z'],
                 ['label' => 'Deposit', 'route' => 'wallet.deposit', 'icon' => 'M12 4v16m8-8H4'],
-                ['label' => 'Account', 'route' => 'profile.edit', 'icon' => 'M5.121 17.804A9 9 0 1118.879 6.196 9 9 0 015.12 17.804zM12 11a3 3 0 100-6 3 3 0 000 6z'],
+                ['label' => auth()->check() ? 'Account' : 'Login', 'route' => auth()->check() ? 'profile.edit' : 'login', 'icon' => 'M5.121 17.804A9 9 0 1118.879 6.196 9 9 0 015.12 17.804zM12 11a3 3 0 100-6 3 3 0 000 6z'],
             ];
         @endphp
         @foreach ($navItems as $item)

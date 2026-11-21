@@ -48,6 +48,16 @@
                     </div>
                 </div>
             @endauth
+            @guest
+                <div style="margin:12px; padding:14px; border-radius:16px; border:1px solid #5a3a10; background:linear-gradient(135deg,#3a0a10,#1a0a0c 65%,#2a1a05);">
+                    <div style="color:#ffd76a; font-size:18px; font-weight:800;">Play &amp; Win Big</div>
+                    <div style="color:#c9a86a; font-size:13px; margin-top:2px;">Games khelne aur deposit karne ke liye login karein.</div>
+                    <div style="display:flex; gap:8px; margin-top:10px;">
+                        <a href="{{ route('login') }}" style="flex:1; text-align:center; padding:9px 0; border-radius:10px; background:linear-gradient(180deg,#ffd76a,#f0a81a); color:#1a0a0c; font-weight:800; text-decoration:none;">Log in</a>
+                        <a href="{{ route('register') }}" style="flex:1; text-align:center; padding:9px 0; border-radius:10px; background:linear-gradient(180deg,#ff2d3d,#b30010); color:#fff; font-weight:800; text-decoration:none;">Sign up</a>
+                    </div>
+                </div>
+            @endguest
 
             <button type="button" class="gs-row" :class="!sel.cat && !sel.prov ? 'gs-on' : ''" @click="pick('', '')">
                 <span class="gs-ico">&#127918;</span><span class="gs-name" style="font-weight:700;">All Games</span>
