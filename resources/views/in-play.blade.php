@@ -98,5 +98,4 @@
             </div>
         @endforelse
     </div>
-    <x-bottom-nav />
 </x-app-layout>
