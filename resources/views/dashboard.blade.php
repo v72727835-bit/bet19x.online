@@ -32,9 +32,7 @@
             @endforeach
         </div>
     @endif
-@auth
-    @include("partials.wallet-bar")
-    @endauth
+@include("partials.wallet-bar")
     @include("partials.astech-games")
 <style id="dashboard-visual-17oct">
 body:has(#ag-root),body:has(#ag-root) main{background:#100c04!important}
@@ -56,14 +54,18 @@ body:has(#ag-root),body:has(#ag-root) main{background:radial-gradient(ellipse at
 #ag-root .ag-chip{flex:none;display:flex;align-items:center;gap:6px;background:linear-gradient(180deg,#22222b,#14141a);color:#e8e8ee;border:1px solid #3a2a12;border-radius:999px;padding:9px 16px;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;white-space:nowrap}
 #ag-root .ag-chip.on{background:linear-gradient(180deg,#ff2d3d,#b30010);color:#fff;border-color:#ff5560;box-shadow:0 0 14px rgba(230,0,18,.5)}
 #ag-root .ag-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-#ag-root .ag-card{position:relative;background:#14141a;border:1px solid #3a2a12;border-radius:14px;color:#fff;transition:transform .15s,border-color .15s,box-shadow .15s;box-shadow:0 4px 14px rgba(0,0,0,.4);overflow:hidden}
-#ag-root .ag-card:hover,#ag-root .ag-card:active{transform:translateY(-3px);border-color:#f0a81a;box-shadow:0 8px 22px rgba(240,168,26,.25)}
-#ag-root .ag-card:after{content:'PLAY';position:absolute;right:6px;top:6px;background:linear-gradient(180deg,#ff2d3d,#b30010);color:#fff;font-size:10px;font-weight:800;letter-spacing:.6px;padding:3px 8px;border-radius:999px;box-shadow:0 2px 8px rgba(0,0,0,.5)}
-#ag-root .ag-img{aspect-ratio:1/1;background:radial-gradient(ellipse at center,#3b1013 0%,#1a0a0c 70%);font-size:34px;font-weight:800;color:#f0a81a}
+#ag-root .ag-card{position:relative;display:block;aspect-ratio:3/4;background:#14141a;border:1px solid rgba(240,168,26,.45);border-radius:14px;color:#fff;overflow:hidden;box-shadow:0 4px 14px rgba(0,0,0,.5);transition:transform .15s,box-shadow .15s,border-color .15s}
+#ag-root .ag-card:hover,#ag-root .ag-card:active{transform:translateY(-3px) scale(1.02);border-color:#ffd76a;box-shadow:0 0 18px rgba(240,168,26,.45)}
+#ag-root .ag-card:after{content:'\25B6';position:absolute;right:6px;top:6px;width:24px;height:24px;border-radius:50%;background:linear-gradient(180deg,#ff2d3d,#b30010);color:#fff;font-size:10px;display:flex;align-items:center;justify-content:center;padding-left:2px;box-shadow:0 2px 8px rgba(0,0,0,.6),0 0 10px rgba(230,0,18,.6)}
+#ag-root .ag-img{position:absolute;inset:0;aspect-ratio:auto;background:radial-gradient(ellipse at center,#4a1418 0%,#14090b 75%);font-size:38px;font-weight:800;color:#f0a81a;display:flex;align-items:center;justify-content:center}
 #ag-root .ag-img img{width:100%;height:100%;object-fit:cover;padding:0}
-#ag-root .ag-t{background:linear-gradient(180deg,#14141a,#0b0b0f);padding:8px 8px 9px;text-align:left;min-height:0}
-#ag-root .ag-t b{font-size:13px;line-height:1.2;font-weight:700;color:#fff}
-#ag-root .ag-t small{display:block;color:#f0a81a;font-size:11px;margin-top:2px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#ag-root .ag-t{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.88) 55%,#000);padding:26px 7px 7px;text-align:left;min-height:0}
+#ag-root .ag-t b{font-size:12px;line-height:1.15;font-weight:700;color:#fff;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#ag-root .ag-t small{display:block;color:#ffd76a;font-size:10px;margin-top:2px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#ag-root .ag-hottitle{font-size:19px;font-weight:800;color:#fff;margin:6px 0 8px;letter-spacing:.4px}
+#ag-root .ag-hot{display:flex;gap:10px;overflow-x:auto;padding:2px 0 12px;margin:0 0 8px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+#ag-root .ag-hot::-webkit-scrollbar{display:none}
+#ag-root .ag-hot .ag-card{flex:none;width:118px}
 #ag-root .ag-more{background:linear-gradient(180deg,#ff2d3d,#b30010);color:#fff;border:0;border-radius:12px;padding:13px 34px;font-family:inherit;font-size:17px;font-weight:800;letter-spacing:.5px;margin-top:22px;box-shadow:0 6px 18px rgba(230,0,18,.4)}
 @media(min-width:641px){#ag-root{padding:40px 24px 32px!important}#ag-root h3{font-size:34px}#ag-root .ag-grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}}
 @media(min-width:1100px){#ag-root .ag-grid{grid-template-columns:repeat(7,minmax(0,1fr))}}

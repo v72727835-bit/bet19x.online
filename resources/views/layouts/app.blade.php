@@ -39,9 +39,7 @@
     <body class="font-sans antialiased" style="background-color: #0D0D0D;">
         <div class="min-h-screen" style="background-color: #0D0D0D;">
             @include('layouts.navigation')
-            @auth
-                @include('layouts.games-sidebar')
-            @endauth
+            @include('layouts.games-sidebar')
 
             <!-- Page Heading -->
             @isset($header)
@@ -57,9 +55,7 @@
                 {{ $slot }}
             </main>
 
-            @auth
-                @include('layouts.bottom-nav')
-            @endauth
+            @include('layouts.bottom-nav')
         </div>
     </body>
 </html>

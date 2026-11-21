@@ -83,12 +83,17 @@ Route::prefix('admin')->name('admin.')->group(function () {
 });
 
 // ---- AS Tech games integration ----
-Route::middleware('auth')->group(function () {
-    Route::get('/games', [App\Http\Controllers\AsTechController::class, 'games'])->name('astech.games');
+// Browsing the catalogue is public; launching a game needs a login.
+Route::get('/games', function (\Illuminate\Http\Request $request) {
+    $qs = $request->getQueryString();
+    return redirect('/dashboard' . ($qs ? '?' . $qs : '') . '#ag-root');
+})->name('astech.games');
+Route::middleware('throttle:60,1')->group(function () {
     Route::get('/games/list', [App\Http\Controllers\AsTechController::class, 'gameList'])->name('astech.list');
     Route::get('/games/meta', [App\Http\Controllers\AsTechController::class, 'gameMeta'])->name('astech.meta');
-    Route::get('/games/launch/{gameId}', [App\Http\Controllers\AsTechController::class, 'launch'])->name('astech.launch');
 });
+Route::get('/games/launch/{gameId}', [App\Http\Controllers\AsTechController::class, 'launch'])
+    ->middleware('auth')->name('astech.launch');
 Route::post('/api/astech/callback', [App\Http\Controllers\AsTechController::class, 'callback'])
     ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class]);
 require __DIR__.'/admin.php';

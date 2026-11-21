@@ -48,11 +48,9 @@
                     <a href="{{ route('login') }}" style="background-color:var(--fx-amber); color:#0D0D0D; font-family:'Rajdhani',sans-serif; font-weight:700;" class="rounded-full px-4 py-2 text-xs fx-btn-glow">Log in</a>
                     <a href="{{ route('register') }}" style="background-color:var(--fx-coral); color:#FFFFFF; font-family:'Rajdhani',sans-serif; font-weight:700;" class="rounded-full px-4 py-2 text-xs fx-btn-glow">Sign up</a>
                 @endguest
-                @auth
                 <button @click="open = false; $dispatch('open-games-sidebar')" style="color:#F4F3FA;" class="p-2" aria-label="All games">
                     <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5h6v6H4V5zm10 0h6v6h-6V5zM4 15h6v6H4v-6zm10 0h6v6h-6v-6z"/></svg>
                 </button>
-                @endauth
                 <button @click="open = !open" style="color:#F4F3FA;" class="p-2">
                     <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path x-show="!open" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />

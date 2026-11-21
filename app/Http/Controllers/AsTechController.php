@@ -9,29 +9,6 @@ use Illuminate\Support\Facades\DB;
 
 class AsTechController extends Controller
 {
-    public function games(AsTechApi $api)
-    {
-        $error = null;
-        try {
-            $games = Cache::remember('astech_games', 1800, fn () => $api->games());
-        } catch (\Throwable $e) {
-            $games = [];
-            $error = $e->getMessage();
-        }
-        $pv = (string) request()->query('provider', '');
-        if ($pv !== '') {
-            $want = array_map('strtolower', array_filter(explode('|', $pv)));
-            $games = array_values(array_filter($games, function ($g) use ($want) {
-                $k = strtolower((string) ($g['provider'] ?? ''));
-                if (strpos($k, 'hd_') === 0) {
-                    $k = substr($k, 3);
-                }
-                return in_array($k, $want, true);
-            }));
-        }
-        return view('astech.games', compact('games', 'error'));
-    }
-
     private function inrGames(AsTechApi $api): array
     {
         $all = Cache::remember('astech_games', 1800, fn () => $api->games());
@@ -78,7 +55,7 @@ class AsTechController extends Controller
             if ($p !== '') $provs[$p] = ($provs[$p] ?? 0) + 1;
         }
         arsort($cats); arsort($provs);
-        return response()->json(['categories' => $cats, 'providers' => array_slice($provs, 0, 60, true)]);
+        return response()->json(['categories' => $cats, 'providers' => $provs]);
     }
     public function launch(Request $request, AsTechApi $api, string $gameId)
     {
@@ -89,7 +66,7 @@ class AsTechController extends Controller
         try {
             $s = $api->open($uid, $gameId);
         } catch (\Throwable $e) {
-            return redirect('/games')->with('error', 'Game launch failed: ' . $e->getMessage());
+            return redirect('/dashboard#ag-root')->with('error', 'Game launch failed: ' . $e->getMessage());
         }
         return redirect()->away($s['gameUrl'])
             ->withHeaders(['Cache-Control' => 'no-store, no-cache, must-revalidate']);

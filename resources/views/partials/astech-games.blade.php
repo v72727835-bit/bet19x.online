@@ -21,6 +21,7 @@
 <div id="ag-err" class="ag-msg" style="display:none"></div>
 <div class="ag-bar"><input id="ag-q" type="search" placeholder="Search games..."><select id="ag-c"><option value="">All categories</option></select><select id="ag-p"><option value="">All providers</option></select></div>
 <div class="ag-chips" id="ag-chips"></div>
+<div id="ag-hotwrap" style="display:none"><div class="ag-hottitle">&#128293; Trending</div><div class="ag-hot" id="ag-hot"></div></div>
 <div class="ag-grid" id="ag-grid"></div>
 <button class="ag-more" id="ag-more" style="display:none">Load more</button>
 <script>
@@ -31,7 +32,9 @@
   var i=document.createElement('div');i.className='ag-img';
   if(x.img){var im=document.createElement('img');im.loading='lazy';im.alt='';im.src=x.img;im.onerror=function(){i.textContent=(x.title||'?').charAt(0)};i.appendChild(im)}else{i.textContent=(x.title||'?').charAt(0)}
   var t=document.createElement('div');t.className='ag-t';var b=document.createElement('b');b.textContent=x.title;var s=document.createElement('small');s.textContent=x.provider;t.appendChild(b);t.appendChild(s);a.appendChild(i);a.appendChild(t);return a}
- function load(reset){if(busy)return;busy=true;if(reset){st.page=1;g.innerHTML=''}
+ var hw=document.getElementById('ag-hotwrap');
+ function hotVis(){hw.style.display=(!st.q&&!st.category&&!st.provider&&document.getElementById('ag-hot').children.length)?'block':'none'}
+ function load(reset){if(busy)return;busy=true;if(reset){st.page=1;g.innerHTML=''}hotVis();
   var u=L+'?q='+encodeURIComponent(st.q)+'&category='+encodeURIComponent(st.category)+'&provider='+encodeURIComponent(st.provider)+'&page='+st.page;
   fetch(u,{headers:{'Accept':'application/json'},credentials:'same-origin'}).then(function(r){return r.json()}).then(function(d){
    if(d.error){err.textContent='Games load nahi hue: '+d.error;err.style.display='block'}else{err.style.display='none'}
@@ -58,6 +61,9 @@
   Object.keys(d.categories||{}).forEach(function(k){chip(ico(k)+' '+k.replace(/_/g,' ').replace(/\b\w/g,function(m){return m.toUpperCase()}),k)});
  }).catch(function(){});
  load(true);
+ fetch(L+'?page=1',{headers:{'Accept':'application/json'},credentials:'same-origin'}).then(function(r){return r.json()}).then(function(d){
+  var hot=document.getElementById('ag-hot');(d.data||[]).slice(0,14).forEach(function(x){hot.appendChild(card(x))});hotVis();
+ }).catch(function(){});
 })();
 </script>
 </section>
