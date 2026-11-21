@@ -1,0 +1,179 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
+use App\Models\DepositRequest;
+use App\Models\User;
+use App\Models\WalletTransaction;
+use App\Models\WithdrawalRequest;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+
+class WalletManagementController extends Controller
+{
+    public function deposits(Request $request)
+    {
+        $query = DepositRequest::with('user');
+
+        if ($status = $request->get('status')) {
+            $query->where('status', $status);
+        }
+
+        $deposits = $query->latest()->paginate(20)->withQueryString();
+
+        return view('admin.wallet.deposits', compact('deposits'));
+    }
+
+    public function approveDeposit(Request $request, DepositRequest $depositRequest)
+    {
+        if ($depositRequest->status !== 'pending') {
+            return back()->with('status', 'Ye request pehle hi process ho chuki hai.');
+        }
+
+        DB::transaction(function () use ($request, $depositRequest) {
+            $wallet = $depositRequest->user->wallet;
+            $wallet->increment('deposit_balance', $depositRequest->amount);
+            $wallet->transactions()->create([
+                'type' => 'credit',
+                'amount' => $depositRequest->amount,
+                'description' => 'Deposit approved',
+                'reference_id' => (string) $depositRequest->id,
+            ]);
+
+            $depositRequest->update([
+                'status' => 'approved',
+                'admin_remarks' => $request->admin_remarks,
+                'processed_by' => auth('admin')->id(),
+                'processed_at' => now(),
+            ]);
+        });
+
+        AuditLog::record('Wallet Management', 'Approve Deposit', "Deposit #{$depositRequest->id} approved");
+
+        return back()->with('status', 'Deposit approve ho gaya.');
+    }
+
+    public function rejectDeposit(Request $request, DepositRequest $depositRequest)
+    {
+        $request->validate(['admin_remarks' => 'required|string|max:255']);
+
+        $depositRequest->update([
+            'status' => 'rejected',
+            'admin_remarks' => $request->admin_remarks,
+            'processed_by' => auth('admin')->id(),
+            'processed_at' => now(),
+        ]);
+
+        AuditLog::record('Wallet Management', 'Reject Deposit', "Deposit #{$depositRequest->id} rejected");
+
+        return back()->with('status', 'Deposit reject kar diya gaya.');
+    }
+
+    public function withdrawals(Request $request)
+    {
+        $query = WithdrawalRequest::with('user');
+
+        if ($status = $request->get('status')) {
+            $query->where('status', $status);
+        }
+
+        $withdrawals = $query->latest()->paginate(20)->withQueryString();
+
+        return view('admin.wallet.withdrawals', compact('withdrawals'));
+    }
+
+    public function approveWithdrawal(Request $request, WithdrawalRequest $withdrawalRequest)
+    {
+        if ($withdrawalRequest->status !== 'pending') {
+            return back()->with('status', 'Ye request pehle hi process ho chuki hai.');
+        }
+
+        DB::transaction(function () use ($request, $withdrawalRequest) {
+            $wallet = $withdrawalRequest->user->wallet;
+            $wallet->decrement('winnings_balance', $withdrawalRequest->amount);
+            $wallet->transactions()->create([
+                'type' => 'debit',
+                'amount' => $withdrawalRequest->amount,
+                'description' => 'Withdrawal approved',
+                'reference_id' => (string) $withdrawalRequest->id,
+            ]);
+
+            $withdrawalRequest->update([
+                'status' => 'approved',
+                'admin_remarks' => $request->admin_remarks,
+                'processed_by' => auth('admin')->id(),
+                'processed_at' => now(),
+            ]);
+        });
+
+        AuditLog::record('Wallet Management', 'Approve Withdrawal', "Withdrawal #{$withdrawalRequest->id} approved");
+
+        return back()->with('status', 'Withdrawal approve ho gaya.');
+    }
+
+    public function rejectWithdrawal(Request $request, WithdrawalRequest $withdrawalRequest)
+    {
+        $request->validate(['admin_remarks' => 'required|string|max:255']);
+
+        $withdrawalRequest->update([
+            'status' => 'rejected',
+            'admin_remarks' => $request->admin_remarks,
+            'processed_by' => auth('admin')->id(),
+            'processed_at' => now(),
+        ]);
+
+        AuditLog::record('Wallet Management', 'Reject Withdrawal', "Withdrawal #{$withdrawalRequest->id} rejected");
+
+        return back()->with('status', 'Withdrawal reject kar diya gaya.');
+    }
+
+    public function manualAdjust(Request $request, User $user)
+    {
+        $request->validate([
+            'action' => 'required|in:credit,debit',
+            'balance_type' => 'required|in:deposit_balance,winnings_balance,bonus_balance',
+            'amount' => 'required|numeric|min:0.01',
+            'reason' => 'required|string|max:255',
+        ]);
+
+        $wallet = $user->wallet;
+
+        DB::transaction(function () use ($request, $wallet) {
+            if ($request->action === 'credit') {
+                $wallet->increment($request->balance_type, $request->amount);
+            } else {
+                $wallet->decrement($request->balance_type, $request->amount);
+            }
+
+            $wallet->transactions()->create([
+                'type' => $request->action,
+                'amount' => $request->amount,
+                'description' => 'Manual adjustment: ' . $request->reason,
+                'reference_id' => 'manual-' . now()->timestamp,
+            ]);
+        });
+
+        AuditLog::record('Wallet Management', 'Manual Adjustment', "User #{$user->id}: {$request->action} {$request->amount} ({$request->balance_type})");
+
+        return back()->with('status', 'Wallet manually adjust ho gaya.');
+    }
+
+    public function transactions(Request $request)
+    {
+        $query = WalletTransaction::with('wallet.user');
+
+        if ($type = $request->get('type')) {
+            $query->where('type', $type);
+        }
+
+        if ($userId = $request->get('user_id')) {
+            $query->whereHas('wallet', fn ($q) => $q->where('user_id', $userId));
+        }
+
+        $transactions = $query->latest()->paginate(30)->withQueryString();
+
+        return view('admin.wallet.transactions', compact('transactions'));
+    }
+}
