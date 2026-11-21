@@ -82,11 +82,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
     });
 });
 
-// In Play route (auto-added)
-Route::get('/in-play', [App\Http\Controllers\InPlayController::class, 'index'])
-    ->middleware('auth')
-    ->name('in-play.index');
-
 // ---- AS Tech games integration ----
 Route::middleware('auth')->group(function () {
     Route::get('/games', [App\Http\Controllers\AsTechController::class, 'games'])->name('astech.games');
