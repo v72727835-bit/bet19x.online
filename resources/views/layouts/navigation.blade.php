@@ -75,13 +75,9 @@
             </a>
 
             <div class="flex gap-8 justify-self-center">
-                @forelse ($menuItems ?? [] as $item)
+                @foreach ($menuItems ?? [] as $item)
                     <a href="{{ $item->url }}" style="color:#F4F3FA; font-family:'Rajdhani',sans-serif; font-weight:600;" class="text-lg hover:text-[var(--fx-amber)] transition">{{ $item->label }}</a>
-                @empty
-                    <a href="#" style="color:#F4F3FA; font-family:'Rajdhani',sans-serif; font-weight:600;" class="text-lg hover:text-[var(--fx-amber)] transition">Contests</a>
-                    <a href="#" style="color:#8A8CB3; font-family:'Rajdhani',sans-serif; font-weight:600;" class="text-lg hover:text-[var(--fx-amber)] transition">My teams</a>
-                    <a href="#" style="color:#8A8CB3; font-family:'Rajdhani',sans-serif; font-weight:600;" class="text-lg hover:text-[var(--fx-amber)] transition">Leaderboard</a>
-                @endforelse
+                @endforeach
             </div>
 
             <div class="flex items-center gap-4 justify-self-end">
@@ -120,13 +116,9 @@
     </div>
 
     <div x-show="open" x-cloak style="background-color:#1D1E3D; border-top:1px solid #24254A;" class="sm:hidden px-4 py-4 space-y-3">
-        @forelse ($menuItems ?? [] as $item)
+        @foreach ($menuItems ?? [] as $item)
             <a href="{{ $item->url }}" style="color:#F4F3FA; font-family:'Rajdhani',sans-serif; font-weight:600;" class="block text-sm">{{ $item->label }}</a>
-        @empty
-            <a href="#" style="color:#F4F3FA; font-family:'Rajdhani',sans-serif; font-weight:600;" class="block text-sm">Contests</a>
-            <a href="#" style="color:#F4F3FA; font-family:'Rajdhani',sans-serif; font-weight:600;" class="block text-sm">My teams</a>
-            <a href="#" style="color:#F4F3FA; font-family:'Rajdhani',sans-serif; font-weight:600;" class="block text-sm">Leaderboard</a>
-        @endforelse
+                @endforeach
         <div style="border-top:1px solid #24254A;" class="pt-3">
             @auth
                 <a href="{{ route('wallet.index') }}" class="flex items-center gap-1.5 rounded-full px-3 py-1.5 w-fit mb-3" style="background-color:#14152B;text-decoration:none;cursor:pointer;">
