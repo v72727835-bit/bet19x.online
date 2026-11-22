@@ -3,9 +3,15 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    @php($fxSetting = $siteSetting ?? \App\Models\SiteSetting::first())
-    @php($fxAdmin = auth('admin')->user())
-    @php($fxSupportUnread = $fxAdmin?->hasPermission('support') ? (int) \App\Models\SupportConversation::sum('admin_unread') : 0)
+    @php
+        $fxSetting = $siteSetting ?? \App\Models\SiteSetting::first();
+        $fxAdmin = auth('admin')->user();
+        try {
+            $fxSupportUnread = $fxAdmin?->hasPermission('support') ? (int) \App\Models\SupportConversation::sum('admin_unread') : 0;
+        } catch (\Throwable $e) {
+            $fxSupportUnread = 0;
+        }
+    @endphp
     <title>{{ $title ?? 'Admin' }} - {{ $fxSetting->site_name ?? 'Admin Panel' }}</title>
     @if(!empty($fxSetting?->favicon_path))
         <link rel="icon" href="{{ asset('storage/'.$fxSetting->favicon_path) }}">
