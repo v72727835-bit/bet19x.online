@@ -153,6 +153,25 @@ body.bx-body {
 .bx-alert-err { background: rgba(232, 38, 63, .14); color: #ffb3bd; box-shadow: inset 0 0 0 1px rgba(232, 38, 63, .4); }
 .bx-alert-ok { background: rgba(53, 221, 140, .12); color: #9ff0c6; box-shadow: inset 0 0 0 1px rgba(53, 221, 140, .4); }
 
+/* ---------- providers (home) ---------- */
+.bx-provgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+@media (min-width: 640px) { .bx-provgrid { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; } }
+@media (min-width: 1100px) { .bx-provgrid { grid-template-columns: repeat(7, minmax(0, 1fr)); } }
+.bx-prov { display: flex; flex-direction: column; align-items: stretch; gap: 2px; padding: 0 0 9px; border: 0; border-radius: 14px; overflow: hidden; cursor: pointer;
+    background: var(--bx-velvet); box-shadow: inset 0 0 0 1px var(--bx-line); color: var(--bx-text); font-family: var(--bx-body); text-align: center; }
+.bx-prov:active { transform: scale(.97); }
+.bx-prov-art { position: relative; display: flex; align-items: center; justify-content: center; aspect-ratio: 1.55; margin-bottom: 6px;
+    background: radial-gradient(ellipse at 50% 60%, #4a1626, #1a0911 80%); }
+.bx-prov-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; padding: 12px 10px; }
+.bx-prov-mono { font-family: var(--bx-display); font-weight: 900; font-size: 30px; color: var(--bx-gold); }
+.bx-prov b { font-size: 13px; font-weight: 800; padding: 0 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bx-prov small { color: var(--bx-muted); font-size: 11px; font-weight: 700; }
+.bx-prov.is-open { box-shadow: inset 0 0 0 2px var(--bx-gold), 0 0 18px rgba(242, 193, 78, .25); }
+.bx-prov.is-open small { color: var(--bx-gold); }
+.bx-provpanel { grid-column: 1 / -1; padding: 14px; border-radius: 18px; background: linear-gradient(180deg, #2f1624, var(--bx-ink)); box-shadow: inset 0 0 0 1px var(--bx-gold-2); animation: bxFade .2s ease-out; scroll-margin-top: 76px; }
+.bx-provpanel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+#games { scroll-margin-top: 70px; }
+
 /* ---------- panels / lists ---------- */
 .bx-panel { background: var(--bx-velvet); border-radius: 18px; box-shadow: inset 0 0 0 1px var(--bx-line); padding: 16px; }
 .bx-list { list-style: none; margin: 0; padding: 0; }
