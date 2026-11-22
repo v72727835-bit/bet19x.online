@@ -21,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin' => EnsureUserIsAdmin::class,
             'admin.role' => EnsureAdminRole::class,
             'admin.perm' => \App\Http\Middleware\EnsureAdminPermission::class,
+            'agent.active' => \App\Http\Middleware\EnsureAgentActive::class,
         ]);
 
         // ResolveTenant MUST run before anything else that queries a
@@ -34,9 +35,22 @@ return Application::configure(basePath: dirname(__DIR__))
             CheckLicense::class,
         ]);
 
+        // Where 'guest:*' sends someone who is already signed in.
+        $middleware->redirectUsersTo(function (Request $request) {
+            if ($request->is('agent') || $request->is('agent/*')) {
+                return route('agent.dashboard');
+            }
+
+            return $request->is('admin/*') ? route('admin.dashboard') : route('dashboard');
+        });
+
         $middleware->redirectGuestsTo(function (Request $request) {
             if ($request->is('master') || $request->is('master/*')) {
                 return route('master.login');
+            }
+
+            if ($request->is('agent') || $request->is('agent/*')) {
+                return route('agent.login');
             }
 
             return $request->is('admin/*') ? route('admin.login') : route('login');

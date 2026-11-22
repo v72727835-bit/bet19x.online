@@ -36,7 +36,7 @@ abstract class TestCase extends BaseTestCase
         Schema::create('users', function (Blueprint $t) {
             $t->id(); $t->string('name'); $t->string('email')->unique(); $t->string('phone')->nullable();
             $t->timestamp('email_verified_at')->nullable(); $t->string('password'); $t->rememberToken();
-            $t->boolean('is_blocked')->default(false); $t->timestamps();
+            $t->boolean('is_blocked')->default(false); $t->unsignedBigInteger('agent_id')->nullable(); $t->timestamps();
         });
         Schema::create('admins', function (Blueprint $t) {
             $t->id(); $t->string('name'); $t->string('email')->unique(); $t->string('password');
@@ -81,6 +81,12 @@ abstract class TestCase extends BaseTestCase
         Schema::create('site_settings', function (Blueprint $t) {
             $t->id(); $t->string('site_name')->nullable(); $t->string('logo_path')->nullable(); $t->string('favicon_path')->nullable();
             $t->string('ticker_text')->nullable(); $t->text('footer_text')->nullable(); $t->timestamps();
+        });
+        Schema::create('agents', function (Blueprint $t) {
+            $t->id(); $t->unsignedBigInteger('parent_id')->nullable(); $t->string('name'); $t->string('email')->unique(); $t->string('phone')->nullable();
+            $t->string('password'); $t->string('role')->default('agent'); $t->decimal('commission_rate', 5, 2)->default(0);
+            $t->decimal('credit_limit', 12, 2)->default(0); $t->decimal('credit_used', 12, 2)->default(0); $t->decimal('wallet_balance', 12, 2)->default(0);
+            $t->boolean('is_active')->default(true); $t->timestamp('last_login_at')->nullable(); $t->timestamps();
         });
         Schema::create('menu_items', function (Blueprint $t) {
             $t->id(); $t->string('label'); $t->string('url'); $t->integer('sort_order')->default(0); $t->boolean('is_active')->default(true); $t->timestamps();

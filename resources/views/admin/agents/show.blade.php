@@ -1,5 +1,21 @@
 <x-admin-layout title="Agent Profile">
 
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+        <a href="{{ route('admin.agents.index') }}" class="fx-muted text-sm">&larr; All agents</a>
+        <div class="flex flex-wrap gap-2">
+            <a href="{{ route('admin.agents.edit', $agent) }}" class="fx-btn-outline text-xs">Edit / set password</a>
+            <form method="POST" action="{{ route('admin.agents.login-as', $agent) }}" target="_blank">
+                @csrf
+                <button class="fx-btn text-xs" style="padding:.4rem .8rem;">Login as agent</button>
+            </form>
+            <form method="POST" action="{{ route('admin.agents.destroy', $agent) }}" onsubmit="return confirm('Delete this agent? This cannot be undone.');">
+                @csrf
+                @method('DELETE')
+                <button class="fx-btn-danger text-xs">Delete agent</button>
+            </form>
+        </div>
+    </div>
+
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div class="fx-card p-5">
             <p class="fx-muted text-xs uppercase">Downline Revenue</p>

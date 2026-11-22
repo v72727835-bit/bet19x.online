@@ -67,4 +67,17 @@ Route::get('/games/launch/{gameId}', [App\Http\Controllers\AsTechController::cla
     ->middleware('auth')->name('astech.launch');
 Route::post('/api/astech/callback', [App\Http\Controllers\AsTechController::class, 'callback'])
     ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class]);
+// ---- Agent panel (master agents / agents / sub-agents) ----
+Route::prefix('agent')->name('agent.')->group(function () {
+    Route::middleware('guest:agent')->group(function () {
+        Route::get('/login', [App\Http\Controllers\Agent\AgentAuthController::class, 'showLogin'])->name('login');
+        Route::post('/login', [App\Http\Controllers\Agent\AgentAuthController::class, 'login'])->name('login.submit');
+    });
+    Route::middleware(['auth:agent', 'agent.active'])->group(function () {
+        Route::get('/', fn () => redirect()->route('agent.dashboard'));
+        Route::get('/dashboard', [App\Http\Controllers\Agent\AgentPanelController::class, 'dashboard'])->name('dashboard');
+        Route::post('/logout', [App\Http\Controllers\Agent\AgentAuthController::class, 'logout'])->name('logout');
+    });
+});
+
 require __DIR__.'/admin.php';
