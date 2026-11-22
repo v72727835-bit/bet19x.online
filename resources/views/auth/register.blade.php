@@ -10,6 +10,14 @@
 
     <form method="POST" action="{{ route('register') }}" class="bx-panel">
         @csrf
+        @php
+            $refCode = request('ref') ?: session('ref_code') ?: request()->cookie('bx_ref');
+            $refAgent = \App\Models\Agent::findByReferralCode($refCode);
+        @endphp
+        @if ($refAgent)
+            <input type="hidden" name="ref" value="{{ $refAgent->referralCode() }}">
+            <p class="bx-alert bx-alert-ok" style="margin-top:0;">Invited by {{ $refAgent->name }} (code {{ $refAgent->referralCode() }})</p>
+        @endif
         <label class="bx-field">
             <span>Full name</span>
             <input class="bx-input" type="text" name="name" value="{{ old('name') }}" required autofocus autocomplete="name">
