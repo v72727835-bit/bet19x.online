@@ -21,18 +21,56 @@ class AdminUserController extends Controller
     {
         $data = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:admins,email',
+            'email' => 'required|email|unique:' . (new Admin)->getConnectionName() . '.admins,email',
             'password' => 'required|string|min:8',
-            'role' => 'required|in:super_admin,manager,support',
+            'type' => 'required|in:super_admin,sub_admin',
+            'permissions' => 'array',
+            'permissions.*' => 'in:' . implode(',', array_keys(Admin::MODULES)),
         ]);
 
-        $data['password'] = Hash::make($data['password']);
-        $data['is_active'] = true;
-        $admin = Admin::create($data);
+        $isSuper = $data['type'] === 'super_admin';
+        if (! $isSuper && empty($data['permissions'])) {
+            return back()->withInput()->withErrors(['permissions' => 'Sub-admin ke liye kam se kam ek permission chunein.']);
+        }
 
-        AuditLog::record('Admin Users', 'Create Admin', "Created admin: {$admin->email} ({$admin->role})");
+        $admin = Admin::create([
+            'name' => $data['name'],
+            'email' => $data['email'],
+            'password' => Hash::make($data['password']),
+            'role' => $isSuper ? 'super_admin' : 'support',
+            'permissions' => $isSuper ? null : array_values($data['permissions']),
+            'is_active' => true,
+        ]);
 
-        return back()->with('status', 'Naya admin user create ho gaya.');
+        AuditLog::record('Admin Users', 'Create Admin', "Created {$admin->roleLabel()}: {$admin->email} [" . implode(', ', $admin->modules()) . ']');
+
+        return back()->with('status', "{$admin->roleLabel()} {$admin->email} create ho gaya.");
+    }
+
+    public function update(Request $request, Admin $admin)
+    {
+        $data = $request->validate([
+            'permissions' => 'array',
+            'permissions.*' => 'in:' . implode(',', array_keys(Admin::MODULES)),
+            'new_password' => 'nullable|string|min:8',
+        ]);
+
+        if ($admin->isSuperAdmin()) {
+            return back()->with('status', 'Super admin ke paas pehle se saari permissions hain.');
+        }
+        if (empty($data['permissions'])) {
+            return back()->withErrors(['permissions' => 'Kam se kam ek permission chunein.']);
+        }
+
+        $admin->permissions = array_values($data['permissions']);
+        if (! empty($data['new_password'])) {
+            $admin->password = Hash::make($data['new_password']);
+        }
+        $admin->save();
+
+        AuditLog::record('Admin Users', 'Update Admin', "Updated admin #{$admin->id} permissions: " . implode(', ', $admin->permissions));
+
+        return back()->with('status', "{$admin->email} ki permissions update ho gayi.");
     }
 
     public function toggle(Admin $admin)

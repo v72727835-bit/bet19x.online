@@ -20,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin' => EnsureUserIsAdmin::class,
             'admin.role' => EnsureAdminRole::class,
+            'admin.perm' => \App\Http\Middleware\EnsureAdminPermission::class,
         ]);
 
         // ResolveTenant MUST run before anything else that queries a

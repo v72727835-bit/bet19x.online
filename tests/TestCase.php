@@ -40,7 +40,7 @@ abstract class TestCase extends BaseTestCase
         });
         Schema::create('admins', function (Blueprint $t) {
             $t->id(); $t->string('name'); $t->string('email')->unique(); $t->string('password');
-            $t->string('role')->default('support'); $t->boolean('is_active')->default(true);
+            $t->string('role')->default('support'); $t->boolean('is_active')->default(true); $t->text('permissions')->nullable();
             $t->timestamp('email_verified_at')->nullable(); $t->rememberToken(); $t->timestamps();
         });
         Schema::create('wallets', function (Blueprint $t) {
@@ -69,6 +69,25 @@ abstract class TestCase extends BaseTestCase
             $t->id(); $t->unsignedBigInteger('admin_id')->nullable(); $t->string('module'); $t->string('action');
             $t->text('description')->nullable(); $t->string('ip_address')->nullable(); $t->timestamps();
         });
+        Schema::create('support_conversations', function (Blueprint $t) {
+            $t->id(); $t->unsignedBigInteger('user_id')->unique(); $t->string('status')->default('open');
+            $t->unsignedInteger('user_unread')->default(0); $t->unsignedInteger('admin_unread')->default(0);
+            $t->timestamp('last_message_at')->nullable(); $t->timestamps();
+        });
+        Schema::create('support_messages', function (Blueprint $t) {
+            $t->id(); $t->unsignedBigInteger('conversation_id'); $t->string('sender'); $t->unsignedBigInteger('admin_id')->nullable();
+            $t->text('body'); $t->timestamps();
+        });
+        Schema::create('site_settings', function (Blueprint $t) {
+            $t->id(); $t->string('site_name')->nullable(); $t->string('logo_path')->nullable(); $t->string('favicon_path')->nullable();
+            $t->string('ticker_text')->nullable(); $t->text('footer_text')->nullable(); $t->timestamps();
+        });
+        Schema::create('menu_items', function (Blueprint $t) {
+            $t->id(); $t->string('label'); $t->string('url'); $t->integer('sort_order')->default(0); $t->boolean('is_active')->default(true); $t->timestamps();
+        });
+        Schema::create('user_teams', function (Blueprint $t) { $t->id(); $t->unsignedBigInteger('user_id'); $t->unsignedBigInteger('match_event_id')->nullable(); $t->timestamps(); });
+        Schema::create('contest_entries', function (Blueprint $t) { $t->id(); $t->unsignedBigInteger('user_id'); $t->unsignedBigInteger('contest_id')->nullable(); $t->string('status')->nullable(); $t->timestamps(); });
+        Schema::create('login_logs', function (Blueprint $t) { $t->id(); $t->unsignedBigInteger('user_id')->nullable(); $t->unsignedBigInteger('admin_id')->nullable(); $t->string('ip_address')->nullable(); $t->string('device')->nullable(); $t->text('user_agent')->nullable(); $t->timestamp('login_at')->nullable(); $t->timestamps(); });
         Schema::create('astech_bet_logs', function (Blueprint $t) {
             $t->id(); $t->string('transaction_id', 191)->unique(); $t->string('user_id', 50)->index();
             $t->string('game_id', 120)->nullable(); $t->string('round_id', 191)->nullable();

@@ -51,7 +51,7 @@
         @endif
 
         <section class="bx-section">
-            <div class="bx-section-head"><h2 class="bx-h2">History</h2></div>
+            <div class="bx-section-head"><h2 class="bx-h2">History</h2><a href="{{ route('bets.index') }}">Bet history</a></div>
             <div class="bx-panel" style="padding:4px 16px;">
                 @if ($transactions->isEmpty())
                     <p class="bx-empty" style="padding:22px 0;">No transactions yet. Your deposits, withdrawals and refunds will show here.</p>

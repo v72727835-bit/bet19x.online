@@ -30,7 +30,9 @@
                 </div>
                 <div class="bx-drawer-group">Account</div>
                 <a class="bx-drow" href="{{ route('wallet.index') }}"><span class="bx-dico">&#128091;</span><span class="bx-dname">Wallet &amp; history</span></a>
+                <a class="bx-drow" href="{{ route('bets.index') }}"><span class="bx-dico">&#127922;</span><span class="bx-dname">Bet history</span></a>
                 <a class="bx-drow" href="{{ route('wallet.withdraw') }}"><span class="bx-dico">&#127974;</span><span class="bx-dname">Withdraw winnings</span></a>
+                <button type="button" class="bx-drow" @click="close(); window.dispatchEvent(new CustomEvent('open-support'))"><span class="bx-dico">&#128172;</span><span class="bx-dname">Live support</span></button>
                 <a class="bx-drow" href="{{ route('profile.edit') }}"><span class="bx-dico">&#128100;</span><span class="bx-dname">Profile</span></a>
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf

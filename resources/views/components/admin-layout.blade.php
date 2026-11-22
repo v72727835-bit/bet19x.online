@@ -4,6 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     @php($fxSetting = $siteSetting ?? \App\Models\SiteSetting::first())
+    @php($fxAdmin = auth('admin')->user())
+    @php($fxSupportUnread = $fxAdmin?->hasPermission('support') ? (int) \App\Models\SupportConversation::sum('admin_unread') : 0)
     <title>{{ $title ?? 'Admin' }} - {{ $fxSetting->site_name ?? 'Admin Panel' }}</title>
     @if(!empty($fxSetting?->favicon_path))
         <link rel="icon" href="{{ asset('storage/'.$fxSetting->favicon_path) }}">
@@ -140,192 +142,279 @@
                     <span class="fx-tooltip">Dashboard</span>
                 </a>
 
+                @if($fxAdmin?->hasPermission('users'))
                 <button @click="toggleGroup('users')" class="fx-nav-group-title fx-group-toggle">
                     <span>Users</span>
                     <svg class="fx-nav-chevron" :class="isGroupOpen('users', {{ (request()->routeIs('admin.users.*') || request()->routeIs('admin.security.login-history')) ? 'true' : 'false' }}) ? 'rotated' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m9 6 6 6-6 6"/></svg>
                 </button>
                 <div x-show="collapsed || isGroupOpen('users', {{ (request()->routeIs('admin.users.*') || request()->routeIs('admin.security.login-history')) ? 'true' : 'false' }})">
+                @if($fxAdmin?->hasPermission('users'))
                 <a href="{{ route('admin.users.index') }}" class="fx-nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}">
                     <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0ZM12 14c-4.4 0-8 2.2-8 5v1h16v-1c0-2.8-3.6-5-8-5Z"/></svg>
                     <span class="fx-label">All Users</span>
                     <span class="fx-tooltip">All Users</span>
                 </a>
+                @endif
+                @if($fxAdmin?->hasPermission('users'))
                 <a href="{{ route('admin.security.login-history') }}" class="fx-nav-link {{ request()->routeIs('admin.security.login-history') ? 'active' : '' }}">
                     <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
                     <span class="fx-label">Login History</span>
                     <span class="fx-tooltip">Login History</span>
                 </a>
+                @endif
                 </div>
+                @endif
 
+                @if($fxAdmin?->hasPermission('bets') || $fxAdmin?->hasPermission('sports') || $fxAdmin?->hasPermission('risk'))
                 <button @click="toggleGroup('contests')" class="fx-nav-group-title fx-group-toggle">
                     <span>Contests</span>
                     <svg class="fx-nav-chevron" :class="isGroupOpen('contests', {{ (request()->routeIs('admin.bets.*') || request()->routeIs('admin.matches.*') || request()->routeIs('admin.sports.*') || request()->routeIs('admin.odds.*') || request()->routeIs('admin.risk.*')) ? 'true' : 'false' }}) ? 'rotated' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m9 6 6 6-6 6"/></svg>
                 </button>
                 <div x-show="collapsed || isGroupOpen('contests', {{ (request()->routeIs('admin.bets.*') || request()->routeIs('admin.matches.*') || request()->routeIs('admin.sports.*') || request()->routeIs('admin.odds.*') || request()->routeIs('admin.risk.*')) ? 'true' : 'false' }})">
+                @if($fxAdmin?->hasPermission('bets'))
                 <a href="{{ route('admin.bets.index') }}" class="fx-nav-link {{ request()->routeIs('admin.bets.*') ? 'active' : '' }}">
                     <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m-6 4h6m-6 4h4M5 3h14a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/></svg>
                     <span class="fx-label">Bet / Entry Management</span>
                     <span class="fx-tooltip">Bet / Entry Management</span>
                 </a>
+                @endif
+                @if($fxAdmin?->hasPermission('bets'))
+                <a href="{{ route('admin.game-bets.index') }}" class="fx-nav-link {{ request()->routeIs('admin.game-bets.*') ? 'active' : '' }}">
+                    <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="3"/><path stroke-linecap="round" d="M8 12h2m-1-1v2M15 11h.01M17 13h.01"/></svg>
+                    <span class="fx-label">Game bets</span>
+                    <span class="fx-tooltip">Game bets</span>
+                </a>
+                @endif
+                @if($fxAdmin?->hasPermission('sports'))
                 <a href="{{ route('admin.matches.index') }}" class="fx-nav-link {{ request()->routeIs('admin.matches.*') ? 'active' : '' }}">
                     <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M12 3v18M3 12h18"/></svg>
                     <span class="fx-label">Match Management</span>
                     <span class="fx-tooltip">Match Management</span>
                 </a>
+                @endif
+                @if($fxAdmin?->hasPermission('sports'))
                 <a href="{{ route('admin.sports.index') }}" class="fx-nav-link {{ request()->routeIs('admin.sports.*') ? 'active' : '' }}">
                     <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
                     <span class="fx-label">Sports</span>
                     <span class="fx-tooltip">Sports</span>
                 </a>
+                @endif
+                @if($fxAdmin?->hasPermission('sports'))
                 <a href="{{ route('admin.odds.index') }}" class="fx-nav-link {{ request()->routeIs('admin.odds.*') ? 'active' : '' }}">
                     <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m3 17 5-5 4 4 8-8m0 0h-5m5 0v5"/></svg>
                     <span class="fx-label">Odds Management</span>
                     <span class="fx-tooltip">Odds Management</span>
                 </a>
+                @endif
+                @if($fxAdmin?->hasPermission('risk'))
                 <a href="{{ route('admin.risk.index') }}" class="fx-nav-link {{ request()->routeIs('admin.risk.*') ? 'active' : '' }}">
                     <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.3 3.9 2.5 17a1.5 1.5 0 0 0 1.3 2.2h16.4A1.5 1.5 0 0 0 21.5 17L13.7 3.9a1.5 1.5 0 0 0-2.6 0Z"/></svg>
                     <span class="fx-label">Risk & Exposure</span>
                     <span class="fx-tooltip">Risk & Exposure</span>
                 </a>
+                @endif
                 </div>
+                @endif
 
+                @if($fxAdmin?->hasPermission('agents'))
                 <p class="fx-nav-group-title">Agents</p>
+                @endif
+                @if($fxAdmin?->hasPermission('agents'))
                 <a href="{{ route('admin.agents.index') }}" class="fx-nav-link {{ request()->routeIs('admin.agents.*') ? 'active' : '' }}">
                     <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2m14 0v-2a4 4 0 0 0-3-3.87M13 3.13a4 4 0 0 1 0 7.75M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/></svg>
                     <span class="fx-label">Master Agent / Agent / Sub-Agent</span>
                     <span class="fx-tooltip">Agents</span>
                 </a>
+                @endif
 
+                @if($fxAdmin?->hasPermission('wallet'))
                 <button @click="toggleGroup('wallet')" class="fx-nav-group-title fx-group-toggle">
                     <span>Wallet</span>
                     <svg class="fx-nav-chevron" :class="isGroupOpen('wallet', {{ (request()->routeIs('admin.wallet.*')) ? 'true' : 'false' }}) ? 'rotated' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m9 6 6 6-6 6"/></svg>
                 </button>
                 <div x-show="collapsed || isGroupOpen('wallet', {{ (request()->routeIs('admin.wallet.*')) ? 'true' : 'false' }})">
+                @if($fxAdmin?->hasPermission('wallet'))
                 <a href="{{ route('admin.wallet.deposits') }}" class="fx-nav-link {{ request()->routeIs('admin.wallet.deposits') ? 'active' : '' }}">
                     <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
                     <span class="fx-label">Deposit Requests</span>
                     <span class="fx-tooltip">Deposit Requests</span>
                 </a>
+                @endif
+                @if($fxAdmin?->hasPermission('wallet'))
                 <a href="{{ route('admin.wallet.withdrawals') }}" class="fx-nav-link {{ request()->routeIs('admin.wallet.withdrawals') ? 'active' : '' }}">
                     <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4"/></svg>
                     <span class="fx-label">Withdrawal Requests</span>
                     <span class="fx-tooltip">Withdrawal Requests</span>
                 </a>
+                @endif
+                @if($fxAdmin?->hasPermission('wallet'))
                 <a href="{{ route('admin.wallet.transactions') }}" class="fx-nav-link {{ request()->routeIs('admin.wallet.transactions') ? 'active' : '' }}">
                     <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path stroke-linecap="round" d="M3 10h18"/></svg>
                     <span class="fx-label">Transactions</span>
                     <span class="fx-tooltip">Transactions</span>
                 </a>
+                @endif
                 </div>
+                @endif
 
+                @if($fxAdmin?->hasPermission('support'))
+                <p class="fx-nav-group-title">Support</p>
+                <a href="{{ route('admin.support.index') }}" class="fx-nav-link {{ request()->routeIs('admin.support.*') ? 'active' : '' }}">
+                    <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 5h16v11H8l-4 4V5z"/></svg>
+                    <span class="fx-label">Live support</span>
+                    @if(($fxSupportUnread ?? 0) > 0)<span class="fx-badge" style="margin-left:auto; background: var(--fx-coral); color:#fff;">{{ $fxSupportUnread }}</span>@endif
+                    <span class="fx-tooltip">Live support</span>
+                </a>
+                @endif
+                @if($fxAdmin?->hasPermission('promotions') || $fxAdmin?->hasPermission('content'))
                 <button @click="toggleGroup('growth')" class="fx-nav-group-title fx-group-toggle">
                     <span>Growth</span>
                     <svg class="fx-nav-chevron" :class="isGroupOpen('growth', {{ (request()->routeIs('admin.bonuses.*') || request()->routeIs('admin.promo-codes.*') || request()->routeIs('admin.vip.*') || request()->routeIs('admin.notifications.*')) ? 'true' : 'false' }}) ? 'rotated' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m9 6 6 6-6 6"/></svg>
                 </button>
                 <div x-show="collapsed || isGroupOpen('growth', {{ (request()->routeIs('admin.bonuses.*') || request()->routeIs('admin.promo-codes.*') || request()->routeIs('admin.vip.*') || request()->routeIs('admin.notifications.*')) ? 'true' : 'false' }})">
+                @if($fxAdmin?->hasPermission('promotions'))
                 <a href="{{ route('admin.bonuses.index') }}" class="fx-nav-link {{ request()->routeIs('admin.bonuses.*') ? 'active' : '' }}">
                     <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20 12v8H4v-8M2 7h20v5H2V7Zm10 13V7m0 0a3 3 0 1 0-3-3c0 1.7 3 3 3 3Zm0 0a3 3 0 1 1 3-3c0 1.7-3 3-3 3Z"/></svg>
                     <span class="fx-label">Bonuses</span>
                     <span class="fx-tooltip">Bonuses</span>
                 </a>
+                @endif
+                @if($fxAdmin?->hasPermission('promotions'))
                 <a href="{{ route('admin.promo-codes.index') }}" class="fx-nav-link {{ request()->routeIs('admin.promo-codes.*') ? 'active' : '' }}">
                     <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.6 12.6 12.6 20.6a2 2 0 0 1-2.8 0l-6.4-6.4a2 2 0 0 1 0-2.8L11.4 3.4a2 2 0 0 1 1.4-.6H19a2 2 0 0 1 2 2v6.6a2 2 0 0 1-.4 1.6ZM15.5 8.5h.01"/></svg>
                     <span class="fx-label">Promo Codes</span>
                     <span class="fx-tooltip">Promo Codes</span>
                 </a>
+                @endif
+                @if($fxAdmin?->hasPermission('promotions'))
                 <a href="{{ route('admin.vip.index') }}" class="fx-nav-link {{ request()->routeIs('admin.vip.*') ? 'active' : '' }}">
                     <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m4 8 4 3 4-6 4 6 4-3-2 11H6L4 8Z"/></svg>
                     <span class="fx-label">VIP & Loyalty</span>
                     <span class="fx-tooltip">VIP & Loyalty</span>
                 </a>
+                @endif
+                @if($fxAdmin?->hasPermission('content'))
                 <a href="{{ route('admin.notifications.index') }}" class="fx-nav-link {{ request()->routeIs('admin.notifications.*') ? 'active' : '' }}">
                     <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 0 0-4-5.7V5a2 2 0 1 0-4 0v.3A6 6 0 0 0 6 11v3.2c0 .5-.2 1-.6 1.4L4 17h5m6 0v1a3 3 0 1 1-6 0v-1m6 0H9"/></svg>
                     <span class="fx-label">Notifications</span>
                     <span class="fx-tooltip">Notifications</span>
                 </a>
+                @endif
                 </div>
+                @endif
 
+                @if($fxAdmin?->hasPermission('reports'))
                 <p class="fx-nav-group-title">Reports</p>
+                @endif
+                @if($fxAdmin?->hasPermission('reports'))
                 <a href="{{ route('admin.reports.index') }}" class="fx-nav-link {{ request()->routeIs('admin.reports.*') ? 'active' : '' }}">
                     <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17V9m4 8v-4m4 4V5M5 21h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2Z"/></svg>
                     <span class="fx-label">Reports & Export</span>
                     <span class="fx-tooltip">Reports & Export</span>
                 </a>
+                @endif
 
+                @if($fxAdmin?->hasPermission('content'))
                 <button @click="toggleGroup('cms')" class="fx-nav-group-title fx-group-toggle">
                     <span>CMS</span>
                     <svg class="fx-nav-chevron" :class="isGroupOpen('cms', {{ (request()->routeIs('admin.cms-pages.*') || request()->routeIs('admin.hero-banners.*') || request()->routeIs('admin.menu.*') || request()->routeIs('admin.sport-categories.*') || request()->routeIs('admin.featured-contests.*') || request()->routeIs('admin.top-winners.*') || request()->routeIs('admin.site-stats.*')) ? 'true' : 'false' }}) ? 'rotated' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m9 6 6 6-6 6"/></svg>
                 </button>
                 <div x-show="collapsed || isGroupOpen('cms', {{ (request()->routeIs('admin.cms-pages.*') || request()->routeIs('admin.hero-banners.*') || request()->routeIs('admin.menu.*') || request()->routeIs('admin.sport-categories.*') || request()->routeIs('admin.featured-contests.*') || request()->routeIs('admin.top-winners.*') || request()->routeIs('admin.site-stats.*')) ? 'true' : 'false' }})">
+                @if($fxAdmin?->hasPermission('content'))
                 <a href="{{ route('admin.cms-pages.index') }}" class="fx-nav-link {{ request()->routeIs('admin.cms-pages.*') ? 'active' : '' }}">
                     <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 3h8l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm8 0v5h5"/></svg>
                     <span class="fx-label">Pages / News / Rules</span>
                     <span class="fx-tooltip">Pages / News / Rules</span>
                 </a>
+                @endif
+                @if($fxAdmin?->hasPermission('content'))
                 <a href="{{ route('admin.hero-banners.index') }}" class="fx-nav-link {{ request()->routeIs('admin.hero-banners.*') ? 'active' : '' }}">
                     <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path stroke-linecap="round" stroke-linejoin="round" d="m3 15 5-4 4 3 5-5 4 3"/></svg>
                     <span class="fx-label">Hero Banners</span>
                     <span class="fx-tooltip">Hero Banners</span>
                 </a>
+                @endif
+                @if($fxAdmin?->hasPermission('content'))
                 <a href="{{ route('admin.menu.index') }}" class="fx-nav-link {{ request()->routeIs('admin.menu.*') ? 'active' : '' }}">
                     <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
                     <span class="fx-label">Menu Items</span>
                     <span class="fx-tooltip">Menu Items</span>
                 </a>
+                @endif
+                @if($fxAdmin?->hasPermission('content'))
                 <a href="{{ route('admin.sport-categories.index') }}" class="fx-nav-link {{ request()->routeIs('admin.sport-categories.*') ? 'active' : '' }}">
                     <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
                     <span class="fx-label">Sport Categories</span>
                     <span class="fx-tooltip">Sport Categories</span>
                 </a>
+                @endif
+                @if($fxAdmin?->hasPermission('content'))
                 <a href="{{ route('admin.featured-contests.index') }}" class="fx-nav-link {{ request()->routeIs('admin.featured-contests.*') ? 'active' : '' }}">
                     <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m12 2 2.9 6.3L21 9l-4.9 4.5L17.5 21 12 17.6 6.5 21l1.4-7.5L3 9l6.1-.7L12 2Z"/></svg>
                     <span class="fx-label">Featured Contests</span>
                     <span class="fx-tooltip">Featured Contests</span>
                 </a>
+                @endif
+                @if($fxAdmin?->hasPermission('content'))
                 <a href="{{ route('admin.top-winners.index') }}" class="fx-nav-link {{ request()->routeIs('admin.top-winners.*') ? 'active' : '' }}">
                     <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0V4Zm-3 0h3v2a3 3 0 0 1-3-3V4Zm16 0h-3v2a3 3 0 0 0 3-3V4Z"/></svg>
                     <span class="fx-label">Top Winners</span>
                     <span class="fx-tooltip">Top Winners</span>
                 </a>
+                @endif
+                @if($fxAdmin?->hasPermission('content'))
                 <a href="{{ route('admin.site-stats.index') }}" class="fx-nav-link {{ request()->routeIs('admin.site-stats.*') ? 'active' : '' }}">
                     <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3v18h18M7 15l4-5 3 3 5-7"/></svg>
                     <span class="fx-label">Site Stats</span>
                     <span class="fx-tooltip">Site Stats</span>
                 </a>
+                @endif
                 </div>
+                @endif
 
+                @if($fxAdmin?->hasPermission('security'))
                 <button @click="toggleGroup('security')" class="fx-nav-group-title fx-group-toggle">
                     <span>Security</span>
                     <svg class="fx-nav-chevron" :class="isGroupOpen('security', {{ (request()->routeIs('admin.security.audit-logs') || request()->routeIs('admin.security.blocked-ips')) ? 'true' : 'false' }}) ? 'rotated' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m9 6 6 6-6 6"/></svg>
                 </button>
                 <div x-show="collapsed || isGroupOpen('security', {{ (request()->routeIs('admin.security.audit-logs') || request()->routeIs('admin.security.blocked-ips')) ? 'true' : 'false' }})">
+                @if($fxAdmin?->hasPermission('security'))
                 <a href="{{ route('admin.security.audit-logs') }}" class="fx-nav-link {{ request()->routeIs('admin.security.audit-logs') ? 'active' : '' }}">
                     <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3 4 6v6c0 4.5 3.4 8.2 8 9 4.6-.8 8-4.5 8-9V6l-8-3Z"/></svg>
                     <span class="fx-label">Audit Logs</span>
                     <span class="fx-tooltip">Audit Logs</span>
                 </a>
+                @endif
+                @if($fxAdmin?->hasPermission('security'))
                 <a href="{{ route('admin.security.blocked-ips') }}" class="fx-nav-link {{ request()->routeIs('admin.security.blocked-ips') ? 'active' : '' }}">
                     <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="m5.6 5.6 12.8 12.8"/></svg>
                     <span class="fx-label">Blocked IPs</span>
                     <span class="fx-tooltip">Blocked IPs</span>
                 </a>
+                @endif
                 </div>
+                @endif
 
+                @if($fxAdmin?->hasPermission('settings') || $fxAdmin?->isSuperAdmin())
                 <button @click="toggleGroup('settings')" class="fx-nav-group-title fx-group-toggle">
                     <span>Settings</span>
                     <svg class="fx-nav-chevron" :class="isGroupOpen('settings', {{ (request()->routeIs('admin.settings.edit') || request()->routeIs('admin.license.*') || request()->routeIs('admin.admin-users.*')) ? 'true' : 'false' }}) ? 'rotated' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m9 6 6 6-6 6"/></svg>
                 </button>
                 <div x-show="collapsed || isGroupOpen('settings', {{ (request()->routeIs('admin.settings.edit') || request()->routeIs('admin.license.*') || request()->routeIs('admin.admin-users.*')) ? 'true' : 'false' }})">
+                @if($fxAdmin?->hasPermission('settings'))
                 <a href="{{ route('admin.settings.edit') }}" class="fx-nav-link {{ request()->routeIs('admin.settings.edit') ? 'active' : '' }}">
                     <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09A1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.14.34.51 1 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
                     <span class="fx-label">General Settings</span>
                     <span class="fx-tooltip">General Settings</span>
                 </a>
+                @endif
+                @if($fxAdmin?->isSuperAdmin())
                 <a href="{{ route('admin.license.index') }}" class="fx-nav-link {{ request()->routeIs('admin.license.*') ? 'active' : '' }}">
                     <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path stroke-linecap="round" stroke-linejoin="round" d="M7 9h10M7 13h6"/></svg>
                     <span class="fx-label">License / Subscription</span>
                     <span class="fx-tooltip">License / Subscription</span>
                 </a>
+                @endif
                 @if(auth('admin')->user() && auth('admin')->user()->isSuperAdmin())
                     <a href="{{ route('admin.admin-users.index') }}" class="fx-nav-link {{ request()->routeIs('admin.admin-users.*') ? 'active' : '' }}">
                         <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 2 4 5v6c0 5 3.4 8.7 8 11 4.6-2.3 8-6 8-11V5l-8-3Z"/></svg>
@@ -334,6 +423,7 @@
                     </a>
                 @endif
                 </div>
+                @endif
             </nav>
 
             <div class="px-3 py-3 hidden lg:block sticky bottom-0" style="background-color: var(--fx-surface); border-top: 1px solid var(--fx-border);">
@@ -382,8 +472,12 @@
                         <div x-show="notifMenu" x-cloak @click.outside="notifMenu = false" x-transition
                              class="fx-dropdown absolute right-0 mt-2 w-72 py-2 text-sm">
                             <p class="px-4 pb-2 fx-muted text-xs uppercase tracking-wide">Notifications</p>
+                            @if($fxAdmin?->hasPermission('content'))
                             <a href="{{ route('admin.notifications.index') }}" class="fx-dropdown-item">Recent activity has arrived</a>
                             <a href="{{ route('admin.notifications.index') }}" class="fx-dropdown-item">View all notifications</a>
+                            @else
+                            <span class="fx-dropdown-item fx-muted">No notifications</span>
+                            @endif
                         </div>
                     </div>
 
@@ -402,7 +496,9 @@
                                 <span class="fx-badge mt-1" style="background-color: var(--fx-card-hover); color: var(--fx-amber);">{{ ucfirst(str_replace('_',' ', Auth::guard('admin')->user()->role ?? 'admin')) }}</span>
                             </div>
                             <div style="border-top: 1px solid var(--fx-border);"></div>
+                            @if($fxAdmin?->hasPermission('settings'))
                             <a href="{{ route('admin.settings.edit') }}" class="fx-dropdown-item">Profile Settings</a>
+                            @endif
                             <form method="POST" action="{{ route('admin.logout') }}">
                                 @csrf
                                 <button type="submit" class="fx-dropdown-item w-full text-left" style="color: var(--fx-coral);">Logout</button>
