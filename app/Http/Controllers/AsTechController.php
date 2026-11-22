@@ -55,7 +55,21 @@ class AsTechController extends Controller
             if ($p !== '') $provs[$p] = ($provs[$p] ?? 0) + 1;
         }
         arsort($cats); arsort($provs);
-        return response()->json(['categories' => $cats, 'providers' => $provs]);
+
+        $names = config('providers.names', []);
+        $logos = config('providers.logos', []);
+        $info = [];
+        foreach (array_keys($provs) as $p) {
+            $k = strtolower(trim($p));
+            $bare = preg_replace('/^hd_/', '', $k);
+            $tight = str_replace([' ', '-', '_'], '', $bare);
+            $info[$p] = [
+                'name' => $names[$k] ?? $names[$bare] ?? $names[$tight] ?? ucwords(str_replace('_', ' ', $bare)),
+                'logo' => $logos[$k] ?? $logos[$bare] ?? $logos[$tight] ?? null,
+            ];
+        }
+
+        return response()->json(['categories' => $cats, 'providers' => $provs, 'provider_info' => $info]);
     }
     public function launch(Request $request, AsTechApi $api, string $gameId)
     {

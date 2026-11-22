@@ -25,6 +25,24 @@ class GuestAccessTest extends TestCase
         $this->getJson('/games/meta')->assertOk()->assertJsonPath('categories.crash', 1);
     }
 
+    public function test_meta_includes_provider_names_and_logos(): void
+    {
+        $this->fakeCatalogue();
+
+        $this->getJson('/games/meta')
+            ->assertOk()
+            ->assertJsonPath('providers.spribe', 1)
+            ->assertJsonPath('provider_info.spribe.name', 'Spribe')
+            ->assertJsonPath('provider_info.pp.name', 'PragmaticPlay-EU');
+        $this->assertNotNull($this->getJson('/games/meta')->json('provider_info.spribe.logo'));
+    }
+
+    public function test_games_can_be_listed_for_one_provider(): void
+    {
+        $this->fakeCatalogue();
+        $this->getJson('/games/list?provider=spribe')->assertOk()->assertJsonPath('total', 1)->assertJsonPath('data.0.title', 'Aviator');
+    }
+
     public function test_guest_cannot_launch_a_game(): void
     {
         $this->fakeCatalogue();

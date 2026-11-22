@@ -56,8 +56,8 @@
             <div class="bx-drawer-group" x-show="filteredProvs().length" style="display:none">Providers</div>
             <template x-for="p in filteredProvs()" :key="'p' + p[0]">
                 <button type="button" class="bx-drow" :class="sel.prov === p[0] ? 'is-on' : ''" @click="pick('', p[0])">
-                    <span class="bx-dico is-mono" x-text="label(p[0]).substring(0, 2).toUpperCase()"></span>
-                    <span class="bx-dname" x-text="label(p[0])"></span>
+                    <span class="bx-dico is-mono" x-text="pname(p[0]).substring(0, 2).toUpperCase()"></span>
+                    <span class="bx-dname" x-text="pname(p[0])"></span>
                     <span class="bx-dcount" x-text="p[1].toLocaleString('en-IN')"></span>
                 </button>
             </template>
@@ -70,7 +70,7 @@
 <script>
 function gamesSidebar() {
     return {
-        open: false, loading: false, failed: false, loaded: false, q: '', cats: [], provs: [], sel: { cat: '', prov: '' },
+        open: false, loading: false, failed: false, loaded: false, q: '', cats: [], provs: [], info: {}, sel: { cat: '', prov: '' },
         init() {
             this.$watch('open', v => { document.body.style.overflow = v ? 'hidden' : ''; });
         },
@@ -83,6 +83,7 @@ function gamesSidebar() {
                 .then(d => {
                     this.cats = Object.entries(d.categories || {});
                     this.provs = Object.entries(d.providers || {});
+                    this.info = d.provider_info || {};
                     this.loaded = true;
                 })
                 .catch(() => { this.failed = true; })
@@ -90,10 +91,11 @@ function gamesSidebar() {
         },
         close() { this.open = false; },
         label(k) { return String(k).replace(/_/g, ' ').replace(/\b\w/g, m => m.toUpperCase()); },
+        pname(k) { return (this.info[k] && this.info[k].name) || this.label(String(k).replace(/^hd_/i, '')); },
         icon(k) { return window.bxCatIcon ? window.bxCatIcon(k) : '\u{1F3AE}'; },
         match(k) { return !this.q || this.label(k).toLowerCase().includes(this.q.toLowerCase()); },
         filteredCats() { return this.cats.filter(c => this.match(c[0])); },
-        filteredProvs() { return this.provs.filter(p => this.match(p[0])); },
+        filteredProvs() { return this.provs.filter(p => !this.q || this.pname(p[0]).toLowerCase().includes(this.q.toLowerCase())); },
         pick(cat, prov) {
             this.sel = { cat: cat, prov: prov };
             this.close();
