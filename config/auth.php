@@ -22,6 +22,12 @@ return [
             'driver' => 'session',
             'provider' => 'master_admins',
         ],
+
+        // Master agents / agents / sub-agents (their own panel at /agent)
+        'agent' => [
+            'driver' => 'session',
+            'provider' => 'agents',
+        ],
     ],
 
     'providers' => [
@@ -38,6 +44,11 @@ return [
         'master_admins' => [
             'driver' => 'eloquent',
             'model' => App\Models\MasterAdmin::class,
+        ],
+
+        'agents' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Agent::class,
         ],
     ],
 

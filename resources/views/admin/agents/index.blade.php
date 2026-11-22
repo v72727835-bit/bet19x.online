@@ -1,5 +1,14 @@
 <x-admin-layout title="Agent Management">
 
+    <div class="fx-card p-4 mb-4 flex flex-wrap items-center gap-3" x-data="{ copied: false }">
+        <div class="flex-1 min-w-0">
+            <p class="fx-heading text-sm">Agent login link</p>
+            <p class="fx-muted text-xs">Master agents, agents and sub-agents log in here with the email and password you set for them.</p>
+        </div>
+        <code class="fx-input text-sm" style="user-select:all;">{{ route('agent.login') }}</code>
+        <button type="button" class="fx-btn-outline text-xs" @click="navigator.clipboard.writeText(@js(route('agent.login'))); copied = true; setTimeout(() => copied = false, 1500)" x-text="copied ? 'Copied' : 'Copy link'">Copy link</button>
+    </div>
+
     <div class="fx-card p-5 mb-6">
         <p class="fx-heading text-sm mb-3">Naya Agent Banao</p>
         <form method="POST" action="{{ route('admin.agents.store') }}" class="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -16,7 +25,7 @@
             <select name="parent_id" class="fx-input">
                 <option value="">-- No Parent (top-level) --</option>
                 @foreach($allAgents as $a)
-                    <option value="{{ $a->id }}">{{ $a->name }} ({{ $a->role }})</option>
+                    <option value="{{ $a->id }}">{{ $a->name }} ({{ $a->roleLabel() }})</option>
                 @endforeach
             </select>
             <input type="number" step="0.01" name="commission_rate" placeholder="Commission %" class="fx-input" required>
@@ -47,7 +56,7 @@
                 @forelse($agents as $a)
                     <tr>
                         <td><a href="{{ route('admin.agents.show', $a) }}" style="color: var(--fx-amber);">{{ $a->name }}</a><br><span class="fx-muted text-xs">{{ $a->email }}</span></td>
-                        <td><span class="fx-badge" style="background-color: var(--fx-card-hover); color: var(--fx-amber);">{{ str_replace('_',' ', $a->role) }}</span></td>
+                        <td><span class="fx-badge" style="background-color: var(--fx-card-hover); color: var(--fx-amber);">{{ $a->roleLabel() }}</span></td>
                         <td class="fx-muted text-xs">{{ $a->parent->name ?? '—' }}</td>
                         <td>{{ $a->users_count }}</td>
                         <td>{{ $a->commission_rate }}%</td>
@@ -56,11 +65,24 @@
                         <td>
                             <span class="fx-badge" style="background-color: {{ $a->is_active ? 'rgba(52,211,153,.15)' : 'rgba(248,113,113,.15)' }}; color: {{ $a->is_active ? 'var(--fx-green)' : 'var(--fx-red)' }};">{{ $a->is_active ? 'Active' : 'Inactive' }}</span>
                         </td>
-                        <td class="flex gap-1">
-                            <form method="POST" action="{{ route('admin.agents.toggle', $a) }}">
-                                @csrf
-                                <button class="fx-btn-outline text-xs">{{ $a->is_active ? 'Deactivate' : 'Activate' }}</button>
-                            </form>
+                        <td>
+                            <div class="flex flex-wrap gap-1">
+                                <a href="{{ route('admin.agents.show', $a) }}" class="fx-btn-outline text-xs" style="padding:.3rem .6rem;">View</a>
+                                <a href="{{ route('admin.agents.edit', $a) }}" class="fx-btn-outline text-xs" style="padding:.3rem .6rem;">Edit</a>
+                                <form method="POST" action="{{ route('admin.agents.login-as', $a) }}" target="_blank">
+                                    @csrf
+                                    <button class="fx-btn text-xs" style="padding:.3rem .6rem;">Login as</button>
+                                </form>
+                                <form method="POST" action="{{ route('admin.agents.toggle', $a) }}">
+                                    @csrf
+                                    <button class="fx-btn-outline text-xs" style="padding:.3rem .6rem;">{{ $a->is_active ? 'Deactivate' : 'Activate' }}</button>
+                                </form>
+                                <form method="POST" action="{{ route('admin.agents.destroy', $a) }}" onsubmit="return confirm('Delete agent {{ addslashes($a->name) }}? This cannot be undone.');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button class="fx-btn-danger text-xs" style="padding:.3rem .6rem;">Delete</button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                 @empty

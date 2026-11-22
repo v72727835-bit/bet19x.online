@@ -12,6 +12,10 @@ class SupportChatController extends Controller
 {
     public function messages(Request $request)
     {
+        if (! $this->ready()) {
+            return response()->json(['messages' => [], 'unread' => 0, 'status' => 'unavailable']);
+        }
+
         $conv = SupportConversation::where('user_id', $request->user()->id)->first();
         if (! $conv) {
             return response()->json(['messages' => [], 'unread' => 0, 'status' => 'new']);
@@ -34,6 +38,10 @@ class SupportChatController extends Controller
 
     public function send(Request $request)
     {
+        if (! $this->ready()) {
+            return response()->json(['message' => 'Live support is not available right now.'], 503);
+        }
+
         $data = $request->validate(['body' => 'required|string|max:2000']);
         $body = trim($data['body']);
         if ($body === '') {
@@ -51,5 +59,13 @@ class SupportChatController extends Controller
         });
 
         return response()->json(['message' => $msg->toChat()]);
+    }
+
+    /** False until `php artisan migrate` has created the support tables. */
+    private function ready(): bool
+    {
+        static $ready = null;
+
+        return $ready ??= \Illuminate\Support\Facades\Schema::connection((new SupportConversation)->getConnectionName())->hasTable('support_conversations');
     }
 }

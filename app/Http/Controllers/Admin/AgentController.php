@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Agent;
 use App\Models\AuditLog;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 
 class AgentController extends Controller
 {
@@ -58,12 +60,21 @@ class AgentController extends Controller
             'credit_limit' => 'required|numeric|min:0',
         ]);
 
+        $data['email'] = strtolower(trim($data['email']));
         $data['password'] = Hash::make($data['password']);
         $agent = Agent::create($data);
 
         AuditLog::record('Agent Management', 'Create Agent', "Created {$agent->role}: {$agent->name}");
 
         return back()->with('status', 'Agent create ho gaya.');
+    }
+
+    public function edit(Agent $agent)
+    {
+        $blocked = $agent->scopeIds(); // can't become a child of itself or its own downline
+        $parents = Agent::whereNotIn('id', $blocked)->orderBy('name')->get();
+
+        return view('admin.agents.edit', compact('agent', 'parents'));
     }
 
     public function update(Request $request, Agent $agent)
@@ -73,13 +84,41 @@ class AgentController extends Controller
             'phone' => 'nullable|string|max:20',
             'commission_rate' => 'required|numeric|min:0|max:100',
             'credit_limit' => 'required|numeric|min:0',
-        ]);
+            'email' => ['sometimes', 'required', 'email', 'max:255', Rule::unique($agent->getConnectionName() . '.agents', 'email')->ignore($agent->id)],
+            'role' => 'sometimes|required|in:master_agent,agent,sub_agent',
+            'parent_id' => ['sometimes', 'nullable', 'integer', Rule::notIn($agent->scopeIds())],
+            'new_password' => 'nullable|string|min:6|max:100',
+        ], ['parent_id.not_in' => 'Agent ko khud ke ya apne neeche wale agent ke under nahi rakh sakte.']);
 
-        $agent->update($data);
+        if (array_key_exists('parent_id', $data) && $data['parent_id'] && ! Agent::whereKey($data['parent_id'])->exists()) {
+            return back()->withErrors(['parent_id' => 'Parent agent nahi mila.'])->withInput();
+        }
+        if (isset($data['email'])) {
+            $data['email'] = strtolower(trim($data['email']));
+        }
 
-        AuditLog::record('Agent Management', 'Update Agent', "Updated agent #{$agent->id} ({$agent->name})");
+        $newPassword = $data['new_password'] ?? null;
+        unset($data['new_password']);
+        $agent->fill($data);
+        if ($newPassword) {
+            $agent->password = Hash::make($newPassword);
+        }
+        $agent->save();
 
-        return back()->with('status', 'Agent update ho gaya.');
+        AuditLog::record('Agent Management', 'Update Agent', "Updated agent #{$agent->id} ({$agent->name})" . ($newPassword ? ' and set a new password' : ''));
+
+        return redirect()->route('admin.agents.show', $agent)->with('status', $newPassword ? 'Agent update ho gaya aur naya password set ho gaya.' : 'Agent update ho gaya.');
+    }
+
+    /** Admin opens the agent panel as this agent (with that agent's own scope). */
+    public function loginAs(Request $request, Agent $agent)
+    {
+        Auth::guard('agent')->login($agent);
+        $request->session()->put('agent_impersonator_admin_id', auth('admin')->id());
+
+        AuditLog::record('Agent Management', 'Login As Agent', "Logged in as {$agent->role} #{$agent->id} ({$agent->email})");
+
+        return redirect()->route('agent.dashboard');
     }
 
     public function toggle(Agent $agent)
@@ -109,9 +148,9 @@ class AgentController extends Controller
             return back()->with('status', 'Is agent ke under users/sub-agents hain, pehle unhe reassign karo.');
         }
 
-        AuditLog::record('Agent Management', 'Delete Agent', $agent->name);
+        AuditLog::record('Agent Management', 'Delete Agent', "{$agent->name} ({$agent->email})");
         $agent->delete();
 
-        return back()->with('status', 'Agent delete ho gaya.');
+        return redirect()->route('admin.agents.index')->with('status', 'Agent delete ho gaya.');
     }
 }

@@ -1,6 +1,10 @@
 {{-- Floating live-support chat. Polls while open; checks for replies every 30s while closed. --}}
 @php
-    $swUnread = auth()->check() ? (int) (\App\Models\SupportConversation::where('user_id', auth()->id())->value('user_unread') ?? 0) : 0;
+    try {
+        $swUnread = auth()->check() ? (int) (\App\Models\SupportConversation::where('user_id', auth()->id())->value('user_unread') ?? 0) : 0;
+    } catch (\Throwable $e) {
+        $swUnread = 0; // support tables not migrated yet — never break the page over a badge
+    }
 @endphp
 <div x-data="supportChat({{ $swUnread }})" @open-support.window="toggle(true)">
     <button type="button" class="bx-chatfab" @click="toggle()" :aria-expanded="open" aria-label="Live support">

@@ -74,6 +74,9 @@ Route::prefix('admin')->group(function(){
    Route::match(['POST','PUT','PATCH','DELETE'],'risk/{user}/update-limits',[\App\Http\Controllers\Admin\RiskManagementController::class,'updateUserLimits'])->name('admin.risk.update-limits');
   });
   Route::middleware('admin.perm:agents')->group(function(){
+   Route::get('agents/{agent}/edit',[\App\Http\Controllers\Admin\AgentController::class,'edit'])->name('admin.agents.edit');
+   Route::post('agents/{agent}/login-as',[\App\Http\Controllers\Admin\AgentController::class,'loginAs'])->name('admin.agents.login-as');
+   Route::match(['DELETE','POST'],'agents/{agent}/delete',[\App\Http\Controllers\Admin\AgentController::class,'destroy'])->name('admin.agents.destroy');
    Route::match(['POST','PUT','PATCH','DELETE'],'agents/{agent}/assign-user',[\App\Http\Controllers\Admin\AgentController::class,'assignUser'])->name('admin.agents.assign-user');
    Route::match(['GET','HEAD'],'agents',[\App\Http\Controllers\Admin\AgentController::class,'index'])->name('admin.agents.index');
    Route::match(['GET','HEAD'],'agents/{agent}',[\App\Http\Controllers\Admin\AgentController::class,'show'])->name('admin.agents.show');
