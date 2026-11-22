@@ -7,6 +7,18 @@ Route::get('/', function () {
     return view('dashboard');
 });
 
+// Agent referral link: remember the code for 30 days, then send to sign-up
+Route::get('/r/{code}', function (\Illuminate\Http\Request $request, string $code) {
+    $agent = App\Models\Agent::findByReferralCode($code);
+    if (! $agent) {
+        return redirect()->route('register');
+    }
+    $request->session()->put('ref_code', $agent->referralCode());
+
+    return redirect()->route('register', ['ref' => $agent->referralCode()])
+        ->withCookie(cookie('bx_ref', $agent->referralCode(), 60 * 24 * 30));
+})->name('referral');
+
 Route::get('/dashboard', function () {
     return view('dashboard');
 })->name('dashboard');
@@ -76,6 +88,11 @@ Route::prefix('agent')->name('agent.')->group(function () {
     Route::middleware(['auth:agent', 'agent.active'])->group(function () {
         Route::get('/', fn () => redirect()->route('agent.dashboard'));
         Route::get('/dashboard', [App\Http\Controllers\Agent\AgentPanelController::class, 'dashboard'])->name('dashboard');
+        Route::get('/players', [App\Http\Controllers\Agent\AgentPanelController::class, 'players'])->name('players');
+        Route::get('/bets', [App\Http\Controllers\Agent\AgentPanelController::class, 'bets'])->name('bets');
+        Route::get('/deposits', [App\Http\Controllers\Agent\AgentPanelController::class, 'deposits'])->name('deposits');
+        Route::get('/withdrawals', [App\Http\Controllers\Agent\AgentPanelController::class, 'withdrawals'])->name('withdrawals');
+        Route::get('/agents', [App\Http\Controllers\Agent\AgentPanelController::class, 'agents'])->name('agents');
         Route::post('/logout', [App\Http\Controllers\Agent\AgentAuthController::class, 'logout'])->name('logout');
     });
 });

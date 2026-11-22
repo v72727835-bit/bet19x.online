@@ -37,11 +37,17 @@ class RegisteredUserController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
+        $referrer = \App\Models\Agent::findByReferralCode(
+            $request->input('ref') ?: $request->session()->get('ref_code') ?: $request->cookie('bx_ref')
+        );
+
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'agent_id' => $referrer?->id,
         ]);
+        $request->session()->forget('ref_code');
 
         Wallet::create(['user_id' => $user->id]);
 

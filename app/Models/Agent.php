@@ -67,6 +67,31 @@ class Agent extends Authenticatable
         return array_merge([$this->id], $this->descendantIds());
     }
 
+    /** Short public code used in referral links, e.g. BX7K. */
+    public function referralCode(): string
+    {
+        return 'BX' . strtoupper(base_convert((string) ($this->id * 7 + 1000), 10, 36));
+    }
+
+    public static function findByReferralCode(?string $code): ?self
+    {
+        $code = strtoupper(trim((string) $code));
+        if (! preg_match('/^BX([0-9A-Z]+)$/', $code, $m)) {
+            return null;
+        }
+        $n = (int) base_convert(strtolower($m[1]), 36, 10) - 1000;
+        if ($n <= 0 || $n % 7 !== 0) {
+            return null;
+        }
+
+        return static::where('id', intdiv($n, 7))->where('is_active', true)->first();
+    }
+
+    public function referralLink(): string
+    {
+        return route('referral', $this->referralCode());
+    }
+
     public function creditAvailable(): float
     {
         return (float) $this->credit_limit - (float) $this->credit_used;

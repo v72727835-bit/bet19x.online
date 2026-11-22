@@ -16,6 +16,14 @@
         </div>
     </div>
 
+    <div class="fx-card p-4 mb-4 flex flex-wrap items-center gap-3">
+        <div class="flex-1 min-w-0">
+            <p class="fx-heading text-sm">Referral link — code {{ $agent->referralCode() }}</p>
+            <p class="fx-muted text-xs">Players who sign up with this link are added under {{ $agent->name }}. Share: {{ rtrim(rtrim(number_format($agent->commission_rate, 2), '0'), '.') }}% of their players' win/loss.</p>
+        </div>
+        <code class="fx-input text-sm" style="user-select:all;">{{ $agent->referralLink() }}</code>
+    </div>
+
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div class="fx-card p-5">
             <p class="fx-muted text-xs uppercase">Downline Revenue</p>

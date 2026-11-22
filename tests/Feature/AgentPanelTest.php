@@ -73,11 +73,11 @@ class AgentPanelTest extends TestCase
         $this->player($other, 'Player Other');
         AstechBetLog::create(['transaction_id' => 't1', 'user_id' => (string) $pSub->id, 'game_id' => 'g', 'bet' => 100, 'win' => 40]);
 
-        $this->actingAs($master, 'agent')->get('/agent/dashboard')->assertOk()
-            ->assertSee('Player Master')->assertSee('Player Agent')->assertSee('Player Sub')->assertDontSee('Player Other')
-            ->assertSee($agent->name)->assertSee($sub->name);
+        $this->actingAs($master, 'agent')->get('/agent/players')->assertOk()
+            ->assertSee('Player Master')->assertSee('Player Agent')->assertSee('Player Sub')->assertDontSee('Player Other');
+        $this->actingAs($master, 'agent')->get('/agent/agents')->assertOk()->assertSee($agent->name)->assertSee($sub->name)->assertDontSee($other->name);
 
-        $this->actingAs($sub, 'agent')->get('/agent/dashboard')->assertOk()
+        $this->actingAs($sub, 'agent')->get('/agent/players')->assertOk()
             ->assertSee('Player Sub')->assertDontSee('Player Agent')->assertDontSee('Player Master')->assertDontSee('Player Other');
     }
 
@@ -137,5 +137,56 @@ class AgentPanelTest extends TestCase
         $a = $this->agent('agent');
         $this->actingAs($this->admin(), 'admin')->get('/admin/agents')->assertOk()
             ->assertSee(route('agent.login'))->assertSee(route('admin.agents.edit', $a))->assertSee(route('admin.agents.login-as', $a));
+    }
+
+    public function test_referral_link_signup_joins_the_agent(): void
+    {
+        $a = $this->agent('sub_agent');
+        $this->get('/r/' . $a->referralCode())->assertRedirect(route('register', ['ref' => $a->referralCode()]));
+        $this->get('/register?ref=' . $a->referralCode())->assertOk()->assertSee('Invited by ' . $a->name);
+
+        $this->post('/register', ['name' => 'New Guy', 'email' => 'newguy@t.com', 'password' => 'Password123!', 'password_confirmation' => 'Password123!', 'ref' => $a->referralCode()]);
+        $this->assertSame($a->id, User::where('email', 'newguy@t.com')->value('agent_id'));
+    }
+
+    public function test_bad_or_inactive_referral_code_is_ignored(): void
+    {
+        $off = $this->agent('agent', null, 'agentpass1', false);
+        $this->assertNull(Agent::findByReferralCode($off->referralCode()));
+        $this->assertNull(Agent::findByReferralCode('BXZZZZ'));
+        $this->get('/r/NOPE')->assertRedirect(route('register'));
+    }
+
+    public function test_share_is_commission_percent_of_players_win_or_loss(): void
+    {
+        $a = $this->agent('agent'); // 10%
+        $p = $this->player($a, 'Loser');
+        AstechBetLog::create(['transaction_id' => 'l1', 'user_id' => (string) $p->id, 'game_id' => 'g', 'bet' => 1000, 'win' => 200]);
+        // players lost 800 -> agent share +80
+        $this->actingAs($a, 'agent')->get('/agent/dashboard?range=all')->assertOk()->assertSee('₹80.00')->assertSee('10%');
+
+        $b = $this->agent('agent');
+        $w = $this->player($b, 'Winner');
+        AstechBetLog::create(['transaction_id' => 'w1', 'user_id' => (string) $w->id, 'game_id' => 'g', 'bet' => 100, 'win' => 600]);
+        // players won 500 -> agent share -50
+        $this->actingAs($b, 'agent')->get('/agent/dashboard?range=all')->assertOk()->assertSee('−₹50.00');
+    }
+
+    public function test_agent_sees_only_their_players_bets_deposits_and_withdrawals(): void
+    {
+        $a = $this->agent('agent');
+        $mine = $this->player($a, 'Mine');
+        $theirs = $this->player($this->agent('agent'), 'Theirs');
+        AstechBetLog::create(['transaction_id' => 'm1', 'user_id' => (string) $mine->id, 'game_id' => 'mygame', 'bet' => 10, 'win' => 0]);
+        AstechBetLog::create(['transaction_id' => 'o1', 'user_id' => (string) $theirs->id, 'game_id' => 'othergame', 'bet' => 10, 'win' => 0]);
+        \App\Models\DepositRequest::create(['user_id' => $mine->id, 'amount' => 777, 'method' => 'upi', 'status' => 'approved']);
+        \App\Models\DepositRequest::create(['user_id' => $theirs->id, 'amount' => 999, 'method' => 'upi', 'status' => 'approved']);
+        \App\Models\WithdrawalRequest::create(['user_id' => $mine->id, 'amount' => 333, 'status' => 'pending']);
+        \App\Models\WithdrawalRequest::create(['user_id' => $theirs->id, 'amount' => 444, 'status' => 'pending']);
+
+        $this->actingAs($a, 'agent')->get('/agent/bets?range=all')->assertOk()->assertSee('mygame')->assertDontSee('othergame');
+        $this->actingAs($a, 'agent')->get('/agent/deposits?range=all')->assertOk()->assertSee('777.00')->assertDontSee('999.00');
+        $this->actingAs($a, 'agent')->get('/agent/withdrawals?range=all')->assertOk()->assertSee('333.00')->assertDontSee('444.00');
+        $this->actingAs($a, 'agent')->get('/agent/bets?player=' . $theirs->id)->assertOk()->assertDontSee('othergame');
     }
 }
