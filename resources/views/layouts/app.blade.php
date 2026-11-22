@@ -16,6 +16,15 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="bx-body">
+        @if (session('impersonator_admin_id') && auth()->check())
+            <div style="position:sticky; top:0; z-index:70; display:flex; align-items:center; justify-content:center; gap:12px; flex-wrap:wrap; padding:8px 14px; background:#f2c14e; color:#2a1206; font-weight:800; font-size:14px;">
+                <span>Admin view: you are logged in as {{ auth()->user()->name }} (#{{ auth()->id() }})</span>
+                <form method="POST" action="{{ route('impersonation.leave') }}" style="margin:0;">
+                    @csrf
+                    <button type="submit" style="border:0; border-radius:8px; padding:6px 12px; background:#2a1206; color:#f2c14e; font-weight:800; cursor:pointer;">Back to admin panel</button>
+                </form>
+            </div>
+        @endif
         @include('layouts.navigation')
         @include('layouts.games-sidebar')
 
@@ -27,5 +36,6 @@
         </main>
 
         @include('layouts.bottom-nav')
+        @include('layouts.support-widget')
     </body>
 </html>

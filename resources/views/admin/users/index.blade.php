@@ -31,12 +31,13 @@
         <table class="w-full fx-table">
             <thead>
                 <tr>
-                    <th>Name</th><th>Email</th><th>Wallet</th><th>Entries</th><th>KYC</th><th>Status</th><th>Joined</th><th>Actions</th>
+                    <th>ID</th><th>Name</th><th>Email (login ID)</th><th>Wallet</th><th>Entries</th><th>KYC</th><th>Status</th><th>Joined</th><th>Actions</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($users as $user)
                     <tr>
+                        <td class="fx-muted">#{{ $user->id }}</td>
                         <td><a href="{{ route('admin.users.show', $user) }}" style="color: var(--fx-amber);">{{ $user->name }}</a></td>
                         <td class="fx-muted">{{ $user->email }}</td>
                         <td>₹{{ number_format(($user->wallet->deposit_balance ?? 0) + ($user->wallet->winnings_balance ?? 0) + ($user->wallet->bonus_balance ?? 0), 2) }}</td>
@@ -52,12 +53,24 @@
                             </span>
                         </td>
                         <td class="fx-muted">{{ $user->created_at->format('d M Y') }}</td>
-                        <td>
-                            <a href="{{ route('admin.users.show', $user) }}" class="fx-btn-outline text-xs">View</a>
+                        <td class="whitespace-nowrap">
+                            <div class="flex flex-wrap gap-1">
+                                <a href="{{ route('admin.users.show', $user) }}" class="fx-btn-outline text-xs" style="padding:.3rem .6rem;">View</a>
+                                <a href="{{ route('admin.users.edit', $user) }}" class="fx-btn-outline text-xs" style="padding:.3rem .6rem;">Edit</a>
+                                <form method="POST" action="{{ route('admin.users.login-as', $user) }}" target="_blank" class="inline">
+                                    @csrf
+                                    <button class="fx-btn text-xs" style="padding:.3rem .6rem;">Login as</button>
+                                </form>
+                                <form method="POST" action="{{ route('admin.users.destroy', $user) }}" class="inline" onsubmit="return confirm('Delete {{ addslashes($user->email) }}? Their wallet, transactions and support chat will be removed. This cannot be undone.');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button class="fx-btn-danger text-xs" style="padding:.3rem .6rem;">Delete</button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="8" class="text-center fx-muted py-6">Koi user nahi mila.</td></tr>
+                    <tr><td colspan="9" class="text-center fx-muted py-6">Koi user nahi mila.</td></tr>
                 @endforelse
             </tbody>
         </table>

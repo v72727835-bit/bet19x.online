@@ -4,8 +4,8 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4">
         <div class="fx-card p-5 lg:col-span-1">
-            <p class="fx-heading text-lg">{{ $user->name }}</p>
-            <p class="fx-muted text-sm">{{ $user->email }}</p>
+            <p class="fx-heading text-lg">{{ $user->name }} <span class="fx-muted text-sm">#{{ $user->id }}</span></p>
+            <p class="fx-muted text-sm">Login ID: {{ $user->email }}</p>
             <p class="fx-muted text-sm">{{ $user->phone ?? 'Phone not added' }}</p>
 
             <div class="mt-4 space-y-2 text-sm">
@@ -14,7 +14,20 @@
                 <div class="flex justify-between"><span class="fx-muted">Bonus Balance</span><span>₹{{ number_format($user->wallet->bonus_balance ?? 0, 2) }}</span></div>
             </div>
 
-            <div class="mt-5 flex gap-2">
+            <div class="mt-5 flex flex-wrap gap-2">
+                <a href="{{ route('admin.users.edit', $user) }}" class="fx-btn-outline text-xs">Edit / set password</a>
+                <form method="POST" action="{{ route('admin.users.login-as', $user) }}" target="_blank">
+                    @csrf
+                    <button class="fx-btn text-xs" style="padding:.4rem .8rem;">Login as user</button>
+                </form>
+                <form method="POST" action="{{ route('admin.users.destroy', $user) }}" onsubmit="return confirm('Delete this user? Their wallet, transactions and support chat will be removed. This cannot be undone.');">
+                    @csrf
+                    @method('DELETE')
+                    <button class="fx-btn-danger text-xs">Delete user</button>
+                </form>
+            </div>
+
+            <div class="mt-3 flex gap-2">
                 @if($user->is_blocked)
                     <form method="POST" action="{{ route('admin.users.unblock', $user) }}">
                         @csrf
@@ -137,6 +150,39 @@
                     </tbody>
                 </table>
             </div>
+        </div>
+    </div>
+
+    @php($bNet = (float) $betTotals->win - (float) $betTotals->bet)
+    <div class="fx-card p-5 mt-4">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <p class="fx-heading text-base">Game bet history</p>
+            <a href="{{ route('admin.game-bets.index', ['user' => $user->id]) }}" class="text-xs" style="color: var(--fx-amber);">See all bets</a>
+        </div>
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4 text-sm">
+            <div><span class="fx-muted block text-xs">Rounds</span>{{ number_format($betTotals->rounds) }}</div>
+            <div><span class="fx-muted block text-xs">Staked</span>₹{{ number_format($betTotals->bet, 2) }}</div>
+            <div><span class="fx-muted block text-xs">Won</span>₹{{ number_format($betTotals->win, 2) }}</div>
+            <div><span class="fx-muted block text-xs">Player net</span><span style="color: {{ $bNet >= 0 ? 'var(--fx-green)' : 'var(--fx-red)' }};">{{ $bNet >= 0 ? '+' : '-' }}₹{{ number_format(abs($bNet), 2) }}</span></div>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full fx-table">
+                <thead><tr><th>Time</th><th>Game</th><th>Bet</th><th>Win</th><th>Balance after</th><th>Status</th></tr></thead>
+                <tbody>
+                    @forelse($gameBets as $b)
+                        <tr>
+                            <td class="fx-muted whitespace-nowrap">{{ $b->created_at?->format('d M Y H:i') }}</td>
+                            <td>{{ $games[$b->game_id]['title'] ?? $b->game_id }}</td>
+                            <td>₹{{ number_format($b->bet, 2) }}</td>
+                            <td>₹{{ number_format($b->win, 2) }}</td>
+                            <td>₹{{ number_format($b->balance_after, 2) }}</td>
+                            <td class="text-xs" style="color: {{ $b->rolled_back ? 'var(--fx-amber)' : 'var(--fx-green)' }};">{{ $b->rolled_back ? 'Refunded' : 'Settled' }}</td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="6" class="text-center fx-muted py-4">Is user ne abhi tak koi game nahi khela.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
         </div>
     </div>
 </x-admin-layout>
