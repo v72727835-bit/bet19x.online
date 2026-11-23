@@ -11,6 +11,9 @@ use App\Models\WithdrawalRequest;
 use App\Services\GameCatalog;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 
 /**
  * Agent panel (master distributor / distributor / retailer).
@@ -202,5 +205,158 @@ class AgentPanelController extends Controller
         }
 
         return view('agent.agents', $this->common($request, 'agents', $rangeKey) + compact('subAgents', 'results'));
+    }
+
+    /** Profit / loss of every player in the network for the selected period. */
+    public function profitLoss(Request $request)
+    {
+        $agent = $this->agent($request);
+        [$ids, $sids] = $this->playerIds($agent);
+        [$from, $rangeKey] = $this->range($request, '30d');
+        $rate = (float) $agent->commission_rate / 100;
+
+        $base = AstechBetLog::whereIn('user_id', $sids)->where('rolled_back', false)
+            ->when($from, fn ($q) => $q->where('created_at', '>=', $from));
+
+        $rows = (clone $base)->groupBy('user_id')
+            ->selectRaw('user_id, COUNT(*) as rounds, SUM(bet) as bet, SUM(win) as win')->get()
+            ->map(function ($r) {
+                $r->pl = (float) $r->win - (float) $r->bet; // player's own profit (+) or loss (-)
+                return $r;
+            });
+
+        $filter = $request->get('show');
+        if ($filter === 'profit') {
+            $list = $rows->filter(fn ($r) => $r->pl > 0)->sortByDesc('pl');
+        } elseif ($filter === 'loss') {
+            $list = $rows->filter(fn ($r) => $r->pl < 0)->sortBy('pl');
+        } else {
+            $list = $rows->sortByDesc(fn ($r) => abs($r->pl));
+        }
+        $list = $list->values();
+
+        $profitRows = $rows->filter(fn ($r) => $r->pl > 0);
+        $lossRows = $rows->filter(fn ($r) => $r->pl < 0);
+        $summary = [
+            'players' => $rows->count(),
+            'in_profit' => $profitRows->count(),
+            'profit' => (float) $profitRows->sum('pl'),
+            'in_loss' => $lossRows->count(),
+            'loss' => abs((float) $lossRows->sum('pl')),
+            'staked' => (float) $rows->sum('bet'),
+            'won' => (float) $rows->sum('win'),
+        ];
+        $summary['net_players'] = $summary['profit'] - $summary['loss'];
+        $summary['share'] = -$summary['net_players'] * $rate;
+
+        $users = User::whereIn('id', $list->pluck('user_id')->all() ?: [0])->with('agent')->get(['id', 'name', 'email', 'agent_id'])->keyBy('id');
+
+        $byGame = (clone $base)->groupBy('game_id')
+            ->selectRaw('game_id, COUNT(*) as rounds, SUM(bet) as bet, SUM(win) as win')
+            ->orderByDesc('bet')->limit(10)->get();
+        $games = ($list->isEmpty() && $byGame->isEmpty()) ? [] : GameCatalog::lookup();
+
+        return view('agent.profit-loss', $this->common($request, 'pl', $rangeKey) + compact('list', 'summary', 'users', 'byGame', 'games', 'rate'));
+    }
+
+    /** An agent creates a distributor / retailer under itself and sets its commission. */
+    public function storeAgent(Request $request)
+    {
+        $me = $this->agent($request);
+        abort_unless($me->canCreateAgents(), 403, 'Aap naye agent nahi bana sakte.');
+
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => ['required', 'email', 'max:255', Rule::unique($me->getConnectionName() . '.agents', 'email')],
+            'phone' => 'nullable|string|max:20',
+            'password' => 'required|string|min:6|max:100',
+            'role' => ['required', Rule::in($me->allowedChildRoles())],
+            'commission_rate' => 'required|numeric|min:0|max:' . (float) $me->commission_rate,
+            'credit_limit' => 'nullable|numeric|min:0|max:' . max(0, $me->creditAvailable()),
+        ], [
+            'commission_rate.max' => 'Commission aapke apne ' . (float) $me->commission_rate . '% se zyada nahi ho sakta.',
+            'credit_limit.max' => 'Credit aapke bache hue credit (₹' . number_format(max(0, $me->creditAvailable()), 2) . ') se zyada nahi ho sakta.',
+        ]);
+
+        $credit = round((float) ($data['credit_limit'] ?? 0), 2);
+
+        $child = DB::connection($me->getConnectionName())->transaction(function () use ($me, $data, $credit) {
+            $fresh = Agent::lockForUpdate()->find($me->id);
+            if ($credit > $fresh->creditAvailable() + 0.00001) {
+                abort(422, 'Credit available nahi hai.');
+            }
+            $fresh->credit_used = round((float) $fresh->credit_used + $credit, 2);
+            $fresh->save();
+
+            return Agent::create([
+                'parent_id' => $me->id,
+                'name' => $data['name'],
+                'email' => strtolower(trim($data['email'])),
+                'phone' => $data['phone'] ?? null,
+                'password' => Hash::make($data['password']),
+                'role' => $data['role'],
+                'commission_rate' => $data['commission_rate'],
+                'credit_limit' => $credit,
+                'is_active' => true,
+            ]);
+        });
+
+        \App\Models\AuditLog::record('Agent Panel', 'Agent Created Agent', "{$me->name} (#{$me->id}) created {$child->role} {$child->email} at {$child->commission_rate}%");
+
+        return redirect()->route('agent.agents')->with('status', "{$child->roleLabel()} {$child->email} ban gaya. Login link: " . route('agent.login'));
+    }
+
+    private function ownChild(Request $request, Agent $child): Agent
+    {
+        $me = $this->agent($request);
+        abort_unless((int) $child->parent_id === (int) $me->id, 403, 'Ye agent aapke direct neeche nahi hai.');
+
+        return $me;
+    }
+
+    public function updateAgent(Request $request, Agent $child)
+    {
+        $me = $this->ownChild($request, $child);
+
+        $data = $request->validate([
+            'commission_rate' => 'required|numeric|min:0|max:' . (float) $me->commission_rate,
+            'credit_limit' => 'nullable|numeric|min:0',
+            'new_password' => 'nullable|string|min:6|max:100',
+        ], ['commission_rate.max' => 'Commission aapke apne ' . (float) $me->commission_rate . '% se zyada nahi ho sakta.']);
+
+        $newCredit = array_key_exists('credit_limit', $data) && $data['credit_limit'] !== null ? round((float) $data['credit_limit'], 2) : (float) $child->credit_limit;
+        $diff = round($newCredit - (float) $child->credit_limit, 2);
+        if ($diff > 0 && $diff > $me->creditAvailable() + 0.00001) {
+            return back()->withErrors(['credit_limit' => 'Itna credit aapke paas bacha nahi hai (₹' . number_format($me->creditAvailable(), 2) . ').']);
+        }
+        if ($newCredit < (float) $child->credit_used) {
+            return back()->withErrors(['credit_limit' => 'Credit limit us agent ke use kiye hue credit se kam nahi ho sakti.']);
+        }
+
+        DB::connection($me->getConnectionName())->transaction(function () use ($me, $child, $data, $newCredit, $diff) {
+            $fresh = Agent::lockForUpdate()->find($me->id);
+            $fresh->credit_used = max(0, round((float) $fresh->credit_used + $diff, 2));
+            $fresh->save();
+
+            $child->commission_rate = $data['commission_rate'];
+            $child->credit_limit = $newCredit;
+            if (! empty($data['new_password'])) {
+                $child->password = Hash::make($data['new_password']);
+            }
+            $child->save();
+        });
+
+        \App\Models\AuditLog::record('Agent Panel', 'Agent Updated Agent', "{$me->name} (#{$me->id}) set {$child->email} to {$child->commission_rate}%, credit ₹{$newCredit}");
+
+        return back()->with('status', "{$child->name} update ho gaya.");
+    }
+
+    public function toggleAgent(Request $request, Agent $child)
+    {
+        $me = $this->ownChild($request, $child);
+        $child->update(['is_active' => ! $child->is_active]);
+        \App\Models\AuditLog::record('Agent Panel', $child->is_active ? 'Agent Activated Agent' : 'Agent Deactivated Agent', "{$me->name} (#{$me->id}) -> {$child->email}");
+
+        return back()->with('status', $child->name . ($child->is_active ? ' active ho gaya.' : ' deactivate ho gaya.'));
     }
 }

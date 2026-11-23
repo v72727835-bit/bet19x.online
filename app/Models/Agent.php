@@ -67,6 +67,21 @@ class Agent extends Authenticatable
         return array_merge([$this->id], $this->descendantIds());
     }
 
+    /** Agent types this agent may create under itself. */
+    public function allowedChildRoles(): array
+    {
+        return match ($this->role) {
+            'master_agent' => ['agent', 'sub_agent'],
+            'agent' => ['sub_agent'],
+            default => [],
+        };
+    }
+
+    public function canCreateAgents(): bool
+    {
+        return $this->allowedChildRoles() !== [];
+    }
+
     /** Short public code used in referral links, e.g. BX7K. */
     public function referralCode(): string
     {
