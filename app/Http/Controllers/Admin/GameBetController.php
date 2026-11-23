@@ -37,14 +37,13 @@ class GameBetController extends Controller
             $q->where('rolled_back', false);
         }
 
-        $totals = (clone $q)->where('rolled_back', false)
-            ->selectRaw('COUNT(*) as rounds, COUNT(DISTINCT user_id) as players, COALESCE(SUM(bet),0) as bet, COALESCE(SUM(win),0) as win')
-            ->first();
+        $totals = \App\Services\BetRounds::totals($q);
+        $players = \App\Services\BetRounds::perPlayer($q, 25);
+        $bets = \App\Services\BetRounds::paginate($q, 50);
+        $users = User::whereIn('id', collect($bets->items())->pluck('user_id')->merge($players->pluck('user_id'))->unique()->all() ?: [0])
+            ->get(['id', 'name', 'email'])->keyBy('id');
+        $games = ($bets->isEmpty()) ? [] : GameCatalog::lookup();
 
-        $bets = $q->latest('id')->paginate(50)->withQueryString();
-        $users = User::whereIn('id', $bets->pluck('user_id')->unique()->all())->get(['id', 'name', 'email'])->keyBy('id');
-        $games = $bets->isEmpty() ? [] : GameCatalog::lookup();
-
-        return view('admin.game-bets.index', compact('bets', 'totals', 'users', 'games'));
+        return view('admin.game-bets.index', compact('bets', 'totals', 'users', 'games', 'players'));
     }
 }

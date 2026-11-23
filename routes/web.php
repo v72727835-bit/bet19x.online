@@ -35,6 +35,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/wallet/withdraw', [App\Http\Controllers\WalletController::class, 'withdraw'])->name('wallet.withdraw');
     Route::post('/wallet/withdraw', [App\Http\Controllers\WalletController::class, 'storeWithdraw'])->name('wallet.withdraw.store');
 
+    // Send money to another player
+    Route::get('/wallet/transfer', [App\Http\Controllers\WalletController::class, 'transfer'])->name('wallet.transfer');
+    Route::get('/wallet/transfer/lookup', [App\Http\Controllers\WalletController::class, 'transferLookup'])->middleware('throttle:30,1')->name('wallet.transfer.lookup');
+    Route::post('/wallet/transfer', [App\Http\Controllers\WalletController::class, 'storeTransfer'])->middleware('throttle:10,1')->name('wallet.transfer.store');
+
     // Bet history (every game round the player played)
     Route::get('/bets', [App\Http\Controllers\BetHistoryController::class, 'index'])->name('bets.index');
 
@@ -94,6 +99,8 @@ Route::prefix('agent')->name('agent.')->group(function () {
         Route::get('/withdrawals', [App\Http\Controllers\Agent\AgentPanelController::class, 'withdrawals'])->name('withdrawals');
         Route::get('/agents', [App\Http\Controllers\Agent\AgentPanelController::class, 'agents'])->name('agents');
         Route::get('/profit-loss', [App\Http\Controllers\Agent\AgentPanelController::class, 'profitLoss'])->name('profit-loss');
+        Route::get('/transfer', [App\Http\Controllers\Agent\AgentPanelController::class, 'transferForm'])->name('transfer');
+        Route::post('/transfer', [App\Http\Controllers\Agent\AgentPanelController::class, 'transfer'])->middleware('throttle:20,1')->name('transfer.store');
         Route::post('/agents', [App\Http\Controllers\Agent\AgentPanelController::class, 'storeAgent'])->name('agents.store');
         Route::post('/agents/{child}/update', [App\Http\Controllers\Agent\AgentPanelController::class, 'updateAgent'])->name('agents.update');
         Route::post('/agents/{child}/toggle', [App\Http\Controllers\Agent\AgentPanelController::class, 'toggleAgent'])->name('agents.toggle');

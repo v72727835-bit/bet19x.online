@@ -259,6 +259,11 @@
                     <span class="fx-label">Transactions</span>
                     <span class="fx-tooltip">Transactions</span>
                 </a>
+                <a href="{{ route('admin.wallet.transfer') }}" class="fx-nav-link {{ request()->routeIs('admin.wallet.transfer*') ? 'active' : '' }}">
+                    <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 8h13l-3-3m6 11H7l3 3"/></svg>
+                    <span class="fx-label">Transfer between users</span>
+                    <span class="fx-tooltip">Transfer between users</span>
+                </a>
                 @endif
                 </div>
                 @endif
@@ -373,6 +378,11 @@
                     <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3v18h18M7 15l4-5 3 3 5-7"/></svg>
                     <span class="fx-label">Site Stats</span>
                     <span class="fx-tooltip">Site Stats</span>
+                </a>
+                <a href="{{ route('admin.providers.index') }}" class="fx-nav-link {{ request()->routeIs('admin.providers.*') ? 'active' : '' }}">
+                    <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h10M4 12h16M4 18h7M17 4v4m-2-2h4"/></svg>
+                    <span class="fx-label">Provider order</span>
+                    <span class="fx-tooltip">Provider order</span>
                 </a>
                 @endif
                 </div>

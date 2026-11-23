@@ -58,9 +58,8 @@ class UserManagementController extends Controller
         $loginLogs = $user->loginLogs()->latest()->take(10)->get();
 
         $betBase = AstechBetLog::where('user_id', (string) $user->id);
-        $betTotals = (clone $betBase)->where('rolled_back', false)
-            ->selectRaw('COUNT(*) as rounds, COALESCE(SUM(bet),0) as bet, COALESCE(SUM(win),0) as win')->first();
-        $gameBets = (clone $betBase)->latest('id')->take(25)->get();
+        $betTotals = \App\Services\BetRounds::totals($betBase);
+        $gameBets = \App\Services\BetRounds::paginate($betBase, 25);
         $games = $gameBets->isEmpty() ? [] : GameCatalog::lookup();
 
         return view('admin.users.show', compact('user', 'userTeams', 'contestEntries', 'loginLogs', 'gameBets', 'betTotals', 'games'));

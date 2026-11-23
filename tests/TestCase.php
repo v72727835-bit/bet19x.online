@@ -80,7 +80,7 @@ abstract class TestCase extends BaseTestCase
         });
         Schema::create('site_settings', function (Blueprint $t) {
             $t->id(); $t->string('site_name')->nullable(); $t->string('logo_path')->nullable(); $t->string('favicon_path')->nullable();
-            $t->string('ticker_text')->nullable(); $t->text('footer_text')->nullable(); $t->timestamps();
+            $t->string('ticker_text')->nullable(); $t->text('footer_text')->nullable(); $t->text('provider_order')->nullable(); $t->timestamps();
         });
         Schema::create('agents', function (Blueprint $t) {
             $t->id(); $t->unsignedBigInteger('parent_id')->nullable(); $t->string('name'); $t->string('email')->unique(); $t->string('phone')->nullable();

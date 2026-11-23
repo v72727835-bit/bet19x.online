@@ -32,6 +32,8 @@ Route::prefix('admin')->group(function(){
    Route::get('game-bets',[\App\Http\Controllers\Admin\GameBetController::class,'index'])->name('admin.game-bets.index');
   });
   Route::middleware('admin.perm:wallet')->group(function(){
+   Route::get('wallet/transfer',[\App\Http\Controllers\Admin\WalletManagementController::class,'transferForm'])->name('admin.wallet.transfer');
+   Route::post('wallet/transfer',[\App\Http\Controllers\Admin\WalletManagementController::class,'transfer'])->name('admin.wallet.transfer.store');
    Route::match(['GET','HEAD'],'wallet/deposits',[\App\Http\Controllers\Admin\WalletManagementController::class,'deposits'])->name('admin.wallet.deposits');
    Route::match(['POST','PUT','PATCH','DELETE'],'wallet/deposits/{depositRequest}/approve',[\App\Http\Controllers\Admin\WalletManagementController::class,'approveDeposit'])->name('admin.wallet.deposits.approve');
    Route::match(['POST','PUT','PATCH','DELETE'],'wallet/deposits/{depositRequest}/reject',[\App\Http\Controllers\Admin\WalletManagementController::class,'rejectDeposit'])->name('admin.wallet.deposits.reject');
@@ -104,6 +106,8 @@ Route::prefix('admin')->group(function(){
    Route::match(['GET','HEAD'],'reports',[\App\Http\Controllers\Admin\ReportController::class,'index'])->name('admin.reports.index');
   });
   Route::middleware('admin.perm:content')->group(function(){
+   Route::get('providers',[\App\Http\Controllers\Admin\ProviderOrderController::class,'index'])->name('admin.providers.index');
+   Route::post('providers',[\App\Http\Controllers\Admin\ProviderOrderController::class,'update'])->name('admin.providers.update');
    Route::match(['DELETE','POST'],'cms-pages/{cmsPage}',[\App\Http\Controllers\Admin\CmsPageController::class,'destroy'])->name('admin.cms-pages.destroy');
    Route::match(['GET','HEAD'],'cms-pages',[\App\Http\Controllers\Admin\CmsPageController::class,'index'])->name('admin.cms-pages.index');
    Route::match(['POST'],'cms-pages',[\App\Http\Controllers\Admin\CmsPageController::class,'store'])->name('admin.cms-pages.store');

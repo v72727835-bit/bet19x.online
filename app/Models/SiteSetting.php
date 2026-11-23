@@ -15,11 +15,26 @@ class SiteSetting extends Model
         'social_facebook', 'social_instagram', 'social_twitter', 'social_telegram',
         'license_key', 'licensed_to', 'licensed_domain', 'license_expires_at',
         'loyalty_points_per_100_played', 'loyalty_point_value',
+        'provider_order',
     ];
 
     protected $casts = [
         'license_expires_at' => 'date',
+        'provider_order' => 'array',
     ];
+
+    /** Pinned provider positions, e.g. ['jili' => 1, 'spribe' => 2]. Empty if not set or not migrated yet. */
+    public static function providerOrder(): array
+    {
+        try {
+            $order = static::query()->value('provider_order');
+        } catch (\Throwable $e) {
+            return [];
+        }
+        $order = is_string($order) ? json_decode($order, true) : $order;
+
+        return is_array($order) ? array_filter($order, fn ($v) => is_numeric($v) && $v > 0) : [];
+    }
 
     public function isLicenseValid(): bool
     {
