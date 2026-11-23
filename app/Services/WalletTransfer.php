@@ -52,6 +52,10 @@ class WalletTransfer
             throw new \DomainException('Jis user ko bhej rahe hain uska account block hai.');
         }
 
+        if (! self::ready()) {
+            throw new \DomainException('Transfer abhi chalu nahi hai: server par "php artisan migrate" chalana baaki hai.');
+        }
+
         $ref = 'TRF-' . strtoupper(Str::random(10));
         $conn = (new Wallet)->getConnectionName();
 
@@ -91,5 +95,23 @@ class WalletTransfer
         });
 
         return $ref;
+    }
+
+    /** False while wallet_transactions.type is still the old ENUM that can't store transfer types. */
+    public static function ready(): bool
+    {
+        static $ready = null;
+        if ($ready !== null) {
+            return $ready;
+        }
+        try {
+            $conn = (new WalletTransaction)->getConnectionName();
+            $col = collect(\Illuminate\Support\Facades\Schema::connection($conn)->getColumns('wallet_transactions'))->firstWhere('name', 'type');
+            $type = strtolower((string) ($col['type'] ?? ''));
+
+            return $ready = ! str_starts_with($type, 'enum') || str_contains($type, 'transfer_out');
+        } catch (\Throwable $e) {
+            return $ready = true;
+        }
     }
 }
