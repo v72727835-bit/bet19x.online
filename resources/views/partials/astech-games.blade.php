@@ -221,7 +221,7 @@
         Object.keys(cats).forEach(function (k) { chip(icon(k) + ' ' + label(k), k); });
 
         provs.innerHTML = '';
-        var keys = Object.keys(pv);
+        var keys = (d.provider_order || Object.keys(pv)).filter(function (k) { return k in pv; });
         keys.forEach(function (k) { provs.appendChild(providerTile(k, pv[k])); });
         $('ag-provcount').textContent = keys.length ? keys.length + ' providers' : '';
         if (!keys.length) provs.innerHTML = '<p class="bx-empty">Providers are not loading right now. Refresh the page in a minute.</p>';

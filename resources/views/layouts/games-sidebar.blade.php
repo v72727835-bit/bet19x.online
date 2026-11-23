@@ -84,7 +84,8 @@ function gamesSidebar() {
                 .then(r => r.json())
                 .then(d => {
                     this.cats = Object.entries(d.categories || {});
-                    this.provs = Object.entries(d.providers || {});
+                    const pv = d.providers || {};
+                    this.provs = (d.provider_order || Object.keys(pv)).filter(k => k in pv).map(k => [k, pv[k]]);
                     this.info = d.provider_info || {};
                     this.loaded = true;
                 })

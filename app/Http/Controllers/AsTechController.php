@@ -69,7 +69,33 @@ class AsTechController extends Controller
             ];
         }
 
-        return response()->json(['categories' => $cats, 'providers' => $provs, 'provider_info' => $info]);
+        // Pinned providers first (admin-set positions), then the rest by game count.
+        $pinned = \App\Models\SiteSetting::providerOrder();
+        $keys = array_keys($provs);
+        $countRank = array_flip($keys);
+        usort($keys, function ($a, $b) use ($pinned, $countRank) {
+            $pa = $pinned[$a] ?? null;
+            $pb = $pinned[$b] ?? null;
+            if ($pa !== null && $pb !== null) {
+                return $pa <=> $pb ?: $countRank[$a] <=> $countRank[$b];
+            }
+            if ($pa !== null || $pb !== null) {
+                return $pa !== null ? -1 : 1;
+            }
+
+            return $countRank[$a] <=> $countRank[$b];
+        });
+        $ordered = [];
+        foreach ($keys as $k) {
+            $ordered[$k] = $provs[$k];
+        }
+
+        return response()->json([
+            'categories' => $cats,
+            'providers' => $ordered,
+            'provider_order' => $keys, // JS objects can reorder numeric-looking keys; use this list for display order
+            'provider_info' => $info,
+        ]);
     }
     public function launch(Request $request, AsTechApi $api, string $gameId)
     {
