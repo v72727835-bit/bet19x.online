@@ -17,15 +17,21 @@ abstract class TestCase extends BaseTestCase
 
         // All product models use the "tenant" connection. In tests point it (and the
         // default connection) at one in-memory sqlite database.
+        // TEST_MYSQL=host:db:user:pass runs the suite against MySQL/MariaDB (strict mode, like production)
+        $mysql = env('TEST_MYSQL') ? explode(':', env('TEST_MYSQL')) : null;
         config([
             'database.default' => 'tenant',
-            'database.connections.tenant' => [
-                'driver' => 'sqlite', 'database' => ':memory:', 'prefix' => '', 'foreign_key_constraints' => false,
-            ],
+            'database.connections.tenant' => $mysql
+                ? ['driver' => 'mysql', 'host' => $mysql[0], 'port' => 3306, 'database' => $mysql[1], 'username' => $mysql[2], 'password' => $mysql[3] ?? '',
+                   'charset' => 'utf8mb4', 'collation' => 'utf8mb4_unicode_ci', 'prefix' => '', 'strict' => true, 'engine' => null]
+                : ['driver' => 'sqlite', 'database' => ':memory:', 'prefix' => '', 'foreign_key_constraints' => false],
             'astech.secret' => 'test-secret',
             'astech.currency' => 'INR',
         ]);
         app('db')->purge('tenant');
+        if ($mysql) {
+            Schema::dropAllTables();
+        }
 
         $this->withoutMiddleware([ResolveTenant::class, CheckBlockedIp::class, CheckLicense::class]);
         $this->createSchema();
