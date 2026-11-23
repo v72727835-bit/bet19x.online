@@ -17,18 +17,29 @@ class BetRounds
 {
     private const KEY = "COALESCE(NULLIF(round_id, ''), transaction_id)";
 
-    /** One row per (player, round) for the filtered bet-log query. */
+    /**
+     * One row per (player, round) for the filtered bet-log query.
+     *
+     * The round key is computed in an inner derived table and grouped on as a
+     * plain column: MariaDB's ONLY_FULL_GROUP_BY rejects grouping on the
+     * expression itself (error 1055), while every engine accepts this form.
+     */
     public static function roundsSub(Builder $logs)
     {
         $k = self::KEY;
+        $conn = (new AstechBetLog)->getConnectionName();
 
-        return (clone $logs)->toBase()
-            ->selectRaw("user_id, {$k} as round_key, MAX(game_id) as game_id, MIN(created_at) as started_at, MAX(created_at) as ended_at, MAX(id) as last_id, COUNT(*) as entries")
+        $rows = (clone $logs)->toBase()
+            ->select(['user_id', 'game_id', 'created_at', 'id', 'bet', 'win', 'rolled_back'])
+            ->selectRaw("{$k} as round_key");
+
+        return DB::connection($conn)->query()->fromSub($rows, 'l')
+            ->select(['user_id', 'round_key'])
+            ->selectRaw('MAX(game_id) as game_id, MIN(created_at) as started_at, MAX(created_at) as ended_at, MAX(id) as last_id, COUNT(*) as entries')
             ->selectRaw('SUM(CASE WHEN rolled_back = 0 THEN bet ELSE 0 END) as bet')
             ->selectRaw('SUM(CASE WHEN rolled_back = 0 THEN win ELSE 0 END) as win')
             ->selectRaw('SUM(CASE WHEN rolled_back = 1 THEN 1 ELSE 0 END) as rolled')
-            ->groupBy('user_id')
-            ->groupBy(DB::raw($k));
+            ->groupBy('user_id', 'round_key');
     }
 
     /** Paginated rounds, newest first, each with ->result (win - bet), ->refunded and ->balance_after. */
