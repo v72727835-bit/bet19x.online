@@ -93,6 +93,10 @@ Route::prefix('agent')->name('agent.')->group(function () {
         Route::get('/deposits', [App\Http\Controllers\Agent\AgentPanelController::class, 'deposits'])->name('deposits');
         Route::get('/withdrawals', [App\Http\Controllers\Agent\AgentPanelController::class, 'withdrawals'])->name('withdrawals');
         Route::get('/agents', [App\Http\Controllers\Agent\AgentPanelController::class, 'agents'])->name('agents');
+        Route::get('/profit-loss', [App\Http\Controllers\Agent\AgentPanelController::class, 'profitLoss'])->name('profit-loss');
+        Route::post('/agents', [App\Http\Controllers\Agent\AgentPanelController::class, 'storeAgent'])->name('agents.store');
+        Route::post('/agents/{child}/update', [App\Http\Controllers\Agent\AgentPanelController::class, 'updateAgent'])->name('agents.update');
+        Route::post('/agents/{child}/toggle', [App\Http\Controllers\Agent\AgentPanelController::class, 'toggleAgent'])->name('agents.toggle');
         Route::post('/logout', [App\Http\Controllers\Agent\AgentAuthController::class, 'logout'])->name('logout');
     });
 });

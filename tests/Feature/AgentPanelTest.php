@@ -189,4 +189,89 @@ class AgentPanelTest extends TestCase
         $this->actingAs($a, 'agent')->get('/agent/withdrawals?range=all')->assertOk()->assertSee('333.00')->assertDontSee('444.00');
         $this->actingAs($a, 'agent')->get('/agent/bets?player=' . $theirs->id)->assertOk()->assertDontSee('othergame');
     }
+
+    public function test_profit_loss_section_splits_players_into_profit_and_loss(): void
+    {
+        $a = $this->agent('agent'); // 10%
+        $winner = $this->player($a, 'Lucky Winner');
+        $loser = $this->player($a, 'Sad Loser');
+        $outside = $this->player($this->agent('agent'), 'Outsider');
+        AstechBetLog::create(['transaction_id' => 'p1', 'user_id' => (string) $winner->id, 'game_id' => 'g', 'bet' => 100, 'win' => 400]); // +300
+        AstechBetLog::create(['transaction_id' => 'p2', 'user_id' => (string) $loser->id, 'game_id' => 'g', 'bet' => 1000, 'win' => 0]);  // -1000
+        AstechBetLog::create(['transaction_id' => 'p3', 'user_id' => (string) $outside->id, 'game_id' => 'g', 'bet' => 5, 'win' => 0]);
+
+        $r = $this->actingAs($a, 'agent')->get('/agent/profit-loss?range=all')->assertOk()
+            ->assertSee('Lucky Winner')->assertSee('Sad Loser')->assertDontSee('Outsider')
+            ->assertSee('+₹300.00')->assertSee('−₹1,000.00')
+            ->assertSee('+₹70.00'); // share: (1000 - 300) x 10%
+
+        $this->actingAs($a, 'agent')->get('/agent/profit-loss?range=all&show=profit')->assertSee('Lucky Winner')->assertDontSee('Sad Loser');
+        $this->actingAs($a, 'agent')->get('/agent/profit-loss?range=all&show=loss')->assertSee('Sad Loser')->assertDontSee('Lucky Winner');
+    }
+
+    public function test_master_agent_creates_agent_with_commission_and_credit(): void
+    {
+        $m = $this->agent('master_agent'); // 10%, credit 1000
+
+        $this->actingAs($m, 'agent')->post('/agent/agents', [
+            'name' => 'Dist One', 'email' => 'Dist@One.com', 'password' => 'distpass1', 'role' => 'agent', 'commission_rate' => 6, 'credit_limit' => 400,
+        ])->assertRedirect(route('agent.agents'));
+
+        $child = Agent::where('email', 'dist@one.com')->firstOrFail();
+        $this->assertSame($m->id, $child->parent_id);
+        $this->assertSame('agent', $child->role);
+        $this->assertEquals(6, (float) $child->commission_rate);
+        $this->assertEquals(400, (float) $child->credit_limit);
+        $this->assertEquals(400, (float) $m->fresh()->credit_used);
+
+        // the new agent can log in
+        $this->post('/agent/logout');
+        $this->post('/agent/login', ['email' => 'dist@one.com', 'password' => 'distpass1'])->assertRedirect(route('agent.dashboard'));
+    }
+
+    public function test_agent_cannot_give_more_commission_or_credit_than_it_has(): void
+    {
+        $m = $this->agent('master_agent'); // 10%, credit 1000
+        $this->actingAs($m, 'agent')->post('/agent/agents', [
+            'name' => 'Greedy', 'email' => 'g@x.com', 'password' => 'gpass123', 'role' => 'agent', 'commission_rate' => 15,
+        ])->assertSessionHasErrors('commission_rate');
+        $this->actingAs($m, 'agent')->post('/agent/agents', [
+            'name' => 'Greedy', 'email' => 'g@x.com', 'password' => 'gpass123', 'role' => 'agent', 'commission_rate' => 5, 'credit_limit' => 5000,
+        ])->assertSessionHasErrors('credit_limit');
+        $this->assertNull(Agent::where('email', 'g@x.com')->first());
+    }
+
+    public function test_role_rules_for_creating_agents(): void
+    {
+        $agent = $this->agent('agent');
+        $this->actingAs($agent, 'agent')->post('/agent/agents', [
+            'name' => 'X', 'email' => 'x1@x.com', 'password' => 'xpass123', 'role' => 'agent', 'commission_rate' => 1,
+        ])->assertSessionHasErrors('role'); // agent may only create sub-agents
+        $this->actingAs($agent, 'agent')->post('/agent/agents', [
+            'name' => 'X', 'email' => 'x2@x.com', 'password' => 'xpass123', 'role' => 'sub_agent', 'commission_rate' => 1,
+        ])->assertRedirect(route('agent.agents'));
+
+        $sub = $this->agent('sub_agent');
+        $this->actingAs($sub, 'agent')->post('/agent/agents', [
+            'name' => 'Y', 'email' => 'y@x.com', 'password' => 'ypass123', 'role' => 'sub_agent', 'commission_rate' => 1,
+        ])->assertForbidden();
+    }
+
+    public function test_agent_edits_only_its_own_children(): void
+    {
+        $m = $this->agent('master_agent');
+        $child = $this->agent('agent', $m->id);
+        $child->update(['credit_limit' => 0]);
+        $stranger = $this->agent('agent');
+
+        $this->actingAs($m, 'agent')->post("/agent/agents/{$child->id}/update", ['commission_rate' => 4, 'credit_limit' => 100])->assertRedirect();
+        $this->assertEquals(4, (float) $child->fresh()->commission_rate);
+        $this->assertEquals(100, (float) $m->fresh()->credit_used);
+
+        $this->actingAs($m, 'agent')->post("/agent/agents/{$stranger->id}/update", ['commission_rate' => 1])->assertForbidden();
+        $this->actingAs($m, 'agent')->post("/agent/agents/{$stranger->id}/toggle")->assertForbidden();
+
+        $this->actingAs($m, 'agent')->post("/agent/agents/{$child->id}/toggle")->assertRedirect();
+        $this->assertFalse($child->fresh()->is_active);
+    }
 }

@@ -57,10 +57,11 @@
         <nav class="ag-tabs" aria-label="Agent panel">
             <a href="{{ route('agent.dashboard') }}" class="{{ $tab === 'overview' ? 'is-on' : '' }}">Overview</a>
             <a href="{{ route('agent.players') }}" class="{{ $tab === 'players' ? 'is-on' : '' }}">Players</a>
+            <a href="{{ route('agent.profit-loss') }}" class="{{ $tab === 'pl' ? 'is-on' : '' }}">Profit / Loss</a>
             <a href="{{ route('agent.bets') }}" class="{{ $tab === 'bets' ? 'is-on' : '' }}">Bet history</a>
             <a href="{{ route('agent.deposits') }}" class="{{ $tab === 'deposits' ? 'is-on' : '' }}">Deposits</a>
             <a href="{{ route('agent.withdrawals') }}" class="{{ $tab === 'withdrawals' ? 'is-on' : '' }}">Withdrawals</a>
-            @if ($agent->role !== 'sub_agent' || $agent->children()->exists())
+            @if ($agent->canCreateAgents() || $agent->children()->exists())
                 <a href="{{ route('agent.agents') }}" class="{{ $tab === 'agents' ? 'is-on' : '' }}">My agents</a>
             @endif
         </nav>
@@ -70,6 +71,13 @@
                 <a href="{{ request()->fullUrlWithQuery(['range' => $key, 'page' => null]) }}" class="{{ $rangeKey === $key ? 'is-on' : '' }}">{{ $label }}</a>
             @endforeach
         </div>
+
+        @if (session('status'))
+            <div class="bx-alert bx-alert-ok">{{ session('status') }}</div>
+        @endif
+        @if ($errors->any())
+            <div class="bx-alert bx-alert-err">{{ $errors->first() }}</div>
+        @endif
 
         @yield('content')
     </main>
