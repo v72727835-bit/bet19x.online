@@ -16,6 +16,9 @@
 
             <div class="mt-5 flex flex-wrap gap-2">
                 <a href="{{ route('admin.users.edit', $user) }}" class="fx-btn-outline text-xs">Edit / set password</a>
+                @if(auth('admin')->user()->hasPermission('wallet'))
+                    <a href="{{ route('admin.wallet.transfer', ['from' => $user->id]) }}" class="fx-btn-outline text-xs">Transfer money</a>
+                @endif
                 <form method="POST" action="{{ route('admin.users.login-as', $user) }}" target="_blank">
                     @csrf
                     <button class="fx-btn text-xs" style="padding:.4rem .8rem;">Login as user</button>
@@ -153,33 +156,30 @@
         </div>
     </div>
 
-    @php($bNet = (float) $betTotals->win - (float) $betTotals->bet)
+    @php
+        $bNet = $betTotals->net;
+    @endphp
     <div class="fx-card p-5 mt-4">
         <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
             <p class="fx-heading text-base">Game bet history</p>
-            <a href="{{ route('admin.game-bets.index', ['user' => $user->id]) }}" class="text-xs" style="color: var(--fx-amber);">See all bets</a>
+            <a href="{{ route('admin.game-bets.index', ['user' => $user->id]) }}" class="text-xs" style="color: var(--fx-amber);">See all rounds</a>
         </div>
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4 text-sm">
+        <div class="grid grid-cols-2 lg:grid-cols-6 gap-3 mb-4 text-sm">
             <div><span class="fx-muted block text-xs">Rounds</span>{{ number_format($betTotals->rounds) }}</div>
             <div><span class="fx-muted block text-xs">Staked</span>₹{{ number_format($betTotals->bet, 2) }}</div>
             <div><span class="fx-muted block text-xs">Won</span>₹{{ number_format($betTotals->win, 2) }}</div>
-            <div><span class="fx-muted block text-xs">Player net</span><span style="color: {{ $bNet >= 0 ? 'var(--fx-green)' : 'var(--fx-red)' }};">{{ $bNet >= 0 ? '+' : '-' }}₹{{ number_format(abs($bNet), 2) }}</span></div>
+            <div><span class="fx-muted block text-xs">Profit (rounds won)</span><span style="color: var(--fx-green);">+₹{{ number_format($betTotals->profit, 2) }}</span></div>
+            <div><span class="fx-muted block text-xs">Loss (rounds lost)</span><span style="color: var(--fx-red);">−₹{{ number_format($betTotals->loss, 2) }}</span></div>
+            <div><span class="fx-muted block text-xs">Net</span><span style="color: {{ $bNet >= 0 ? 'var(--fx-green)' : 'var(--fx-red)' }};">{{ $bNet >= 0 ? '+' : '−' }}₹{{ number_format(abs($bNet), 2) }}</span></div>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full fx-table">
-                <thead><tr><th>Time</th><th>Game</th><th>Bet</th><th>Win</th><th>Balance after</th><th>Status</th></tr></thead>
+                <thead><tr><th>Time</th><th>Game</th><th>Round</th><th>Bet</th><th>Win</th><th>Profit / Loss</th><th>Balance after</th><th>Status</th></tr></thead>
                 <tbody>
-                    @forelse($gameBets as $b)
-                        <tr>
-                            <td class="fx-muted whitespace-nowrap">{{ $b->created_at?->format('d M Y H:i') }}</td>
-                            <td>{{ $games[$b->game_id]['title'] ?? $b->game_id }}</td>
-                            <td>₹{{ number_format($b->bet, 2) }}</td>
-                            <td>₹{{ number_format($b->win, 2) }}</td>
-                            <td>₹{{ number_format($b->balance_after, 2) }}</td>
-                            <td class="text-xs" style="color: {{ $b->rolled_back ? 'var(--fx-amber)' : 'var(--fx-green)' }};">{{ $b->rolled_back ? 'Refunded' : 'Settled' }}</td>
-                        </tr>
+                    @forelse($gameBets as $r)
+                        @include('admin.game-bets._round-row', ['r' => $r, 'games' => $games])
                     @empty
-                        <tr><td colspan="6" class="text-center fx-muted py-4">Is user ne abhi tak koi game nahi khela.</td></tr>
+                        <tr><td colspan="8" class="text-center fx-muted py-4">Is user ne abhi tak koi game nahi khela.</td></tr>
                     @endforelse
                 </tbody>
             </table>

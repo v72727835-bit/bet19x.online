@@ -28,44 +28,63 @@
         <a href="{{ route('admin.game-bets.index') }}" class="fx-btn-outline text-sm">Reset</a>
     </form>
 
-    @php($ggr = (float) $totals->bet - (float) $totals->win)
-    <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
-        <div class="fx-card p-4"><p class="fx-muted text-xs">Rounds</p><p class="fx-heading text-2xl">{{ number_format($totals->rounds) }}</p></div>
+    @php
+        $ggr = $totals->bet - $totals->win;
+    @endphp
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+        <div class="fx-card p-4"><p class="fx-muted text-xs">Rounds played</p><p class="fx-heading text-2xl">{{ number_format($totals->rounds) }}</p><p class="fx-muted text-xs">{{ number_format($totals->rounds_won) }} won · {{ number_format($totals->rounds_lost) }} lost</p></div>
         <div class="fx-card p-4"><p class="fx-muted text-xs">Players</p><p class="fx-heading text-2xl">{{ number_format($totals->players) }}</p></div>
         <div class="fx-card p-4"><p class="fx-muted text-xs">Total staked</p><p class="fx-heading text-2xl">₹{{ number_format($totals->bet, 2) }}</p></div>
         <div class="fx-card p-4"><p class="fx-muted text-xs">Total paid out</p><p class="fx-heading text-2xl">₹{{ number_format($totals->win, 2) }}</p></div>
-        <div class="fx-card p-4"><p class="fx-muted text-xs">House profit (GGR)</p><p class="fx-heading text-2xl" style="color: {{ $ggr >= 0 ? 'var(--fx-green)' : 'var(--fx-red)' }};">₹{{ number_format($ggr, 2) }}</p></div>
+        <div class="fx-card p-4"><p class="fx-muted text-xs">Players' profit (rounds they won)</p><p class="fx-heading text-2xl" style="color: var(--fx-green);">+₹{{ number_format($totals->profit, 2) }}</p></div>
+        <div class="fx-card p-4"><p class="fx-muted text-xs">Players' loss (rounds they lost)</p><p class="fx-heading text-2xl" style="color: var(--fx-red);">−₹{{ number_format($totals->loss, 2) }}</p></div>
+        <div class="fx-card p-4"><p class="fx-muted text-xs">Players' net</p><p class="fx-heading text-2xl" style="color: {{ $totals->net >= 0 ? 'var(--fx-green)' : 'var(--fx-red)' }};">{{ $totals->net >= 0 ? '+' : '−' }}₹{{ number_format(abs($totals->net), 2) }}</p></div>
+        <div class="fx-card p-4"><p class="fx-muted text-xs">House profit (GGR)</p><p class="fx-heading text-2xl" style="color: {{ $ggr >= 0 ? 'var(--fx-green)' : 'var(--fx-red)' }};">{{ $ggr >= 0 ? '+' : '−' }}₹{{ number_format(abs($ggr), 2) }}</p></div>
     </div>
 
-    <div class="fx-card overflow-x-auto">
+    <div class="fx-card overflow-x-auto mb-4">
+        <p class="fx-heading text-base px-4 pt-4">Who is betting how much</p>
         <table class="w-full fx-table">
-            <thead>
-                <tr><th>Time</th><th>Player</th><th>Game</th><th>Round</th><th>Bet</th><th>Win</th><th>Player result</th><th>Balance after</th><th>Status</th></tr>
-            </thead>
+            <thead><tr><th>Player</th><th>Rounds</th><th>Staked</th><th>Won</th><th>Profit</th><th>Loss</th><th>Net</th><th>Last played</th><th></th></tr></thead>
             <tbody>
-                @forelse($bets as $b)
-                    @php($pu = $users[$b->user_id] ?? null)
-                    @php($res = (float) $b->win - (float) $b->bet)
+                @forelse($players as $p)
+                    @php
+                        $pu = $users[$p->user_id] ?? null;
+                    @endphp
                     <tr>
-                        <td class="fx-muted whitespace-nowrap">{{ $b->created_at?->format('d M Y H:i:s') }}</td>
                         <td>
                             @if($pu)
                                 <a href="{{ route('admin.users.show', $pu) }}" style="color: var(--fx-amber);">{{ $pu->name }}</a>
                                 <div class="fx-muted text-xs">#{{ $pu->id }} · {{ $pu->email }}</div>
                             @else
-                                <span class="fx-muted">#{{ $b->user_id }} (deleted)</span>
+                                <span class="fx-muted">#{{ $p->user_id }}</span>
                             @endif
                         </td>
-                        <td>{{ $games[$b->game_id]['title'] ?? $b->game_id }}<div class="fx-muted text-xs">{{ $b->game_id }}</div></td>
-                        <td class="fx-muted text-xs">{{ $b->round_id }}<div>{{ $b->transaction_id }}</div></td>
-                        <td>₹{{ number_format($b->bet, 2) }}</td>
-                        <td>₹{{ number_format($b->win, 2) }}</td>
-                        <td style="color: {{ $res >= 0 ? 'var(--fx-green)' : 'var(--fx-red)' }};">{{ $res >= 0 ? '+' : '-' }}₹{{ number_format(abs($res), 2) }}</td>
-                        <td>₹{{ number_format($b->balance_after, 2) }}</td>
-                        <td>
-                            <span class="fx-badge" style="background-color: var(--fx-card-hover); color: {{ $b->rolled_back ? 'var(--fx-amber)' : 'var(--fx-green)' }};">{{ $b->rolled_back ? 'Refunded' : 'Settled' }}</span>
-                        </td>
+                        <td>{{ number_format($p->rounds) }}</td>
+                        <td>₹{{ number_format($p->bet, 2) }}</td>
+                        <td>₹{{ number_format($p->win, 2) }}</td>
+                        <td style="color: var(--fx-green);">+₹{{ number_format($p->profit, 2) }}</td>
+                        <td style="color: var(--fx-red);">−₹{{ number_format($p->loss, 2) }}</td>
+                        <td style="color: {{ $p->net >= 0 ? 'var(--fx-green)' : 'var(--fx-red)' }}; font-weight:600;">{{ $p->net >= 0 ? '+' : '−' }}₹{{ number_format(abs($p->net), 2) }}</td>
+                        <td class="fx-muted whitespace-nowrap">{{ $p->last_played ? \Illuminate\Support\Carbon::parse($p->last_played)->diffForHumans() : '' }}</td>
+                        <td><a href="{{ route('admin.game-bets.index', array_merge(request()->except('page'), ['user' => $p->user_id])) }}" class="text-xs" style="color: var(--fx-amber);">Rounds</a></td>
                     </tr>
+                @empty
+                    <tr><td colspan="9" class="text-center fx-muted py-6">Koi bet nahi mili.</td></tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+
+    <div class="fx-card overflow-x-auto">
+        <p class="fx-heading text-base px-4 pt-4">Rounds <span class="fx-muted text-xs" style="font-family:inherit;">— stake and payout of each round joined into one line</span></p>
+        <table class="w-full fx-table">
+            <thead>
+                <tr><th>Time</th><th>Player</th><th>Game</th><th>Round</th><th>Bet</th><th>Win</th><th>Profit / Loss</th><th>Balance after</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+                @forelse($bets as $r)
+                    @include('admin.game-bets._round-row', ['r' => $r, 'games' => $games, 'pu' => $users[$r->user_id] ?? null, 'showPlayer' => true])
                 @empty
                     <tr><td colspan="9" class="text-center fx-muted py-6">Koi bet nahi mili.</td></tr>
                 @endforelse

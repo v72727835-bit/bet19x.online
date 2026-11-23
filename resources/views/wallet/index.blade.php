@@ -22,6 +22,7 @@
             <div style="display:flex; gap:10px; margin-top:12px;">
                 <a href="{{ route('wallet.deposit') }}" class="bx-btn bx-btn-gold" style="flex:1;">Deposit</a>
                 <a href="{{ route('wallet.withdraw') }}" class="bx-btn bx-btn-ghost" style="flex:1;">Withdraw</a>
+                <a href="{{ route('wallet.transfer') }}" class="bx-btn bx-btn-ghost" style="flex:1;">Transfer</a>
             </div>
         </div>
 
@@ -58,7 +59,7 @@
                 @else
                     <ul class="bx-list">
                         @foreach ($transactions as $t)
-                            @php($in = in_array($t->type, ['deposit', 'credit', 'refund']))
+                            @php($in = in_array($t->type, ['deposit', 'credit', 'refund', 'transfer_in']))
                             <li>
                                 <div class="bx-grow">
                                     <b>{{ $t->description ?: ucfirst($t->type) }}</b>

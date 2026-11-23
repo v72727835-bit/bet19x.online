@@ -61,6 +61,7 @@
             <a href="{{ route('agent.bets') }}" class="{{ $tab === 'bets' ? 'is-on' : '' }}">Bet history</a>
             <a href="{{ route('agent.deposits') }}" class="{{ $tab === 'deposits' ? 'is-on' : '' }}">Deposits</a>
             <a href="{{ route('agent.withdrawals') }}" class="{{ $tab === 'withdrawals' ? 'is-on' : '' }}">Withdrawals</a>
+            <a href="{{ route('agent.transfer') }}" class="{{ $tab === 'transfer' ? 'is-on' : '' }}">Transfer</a>
             @if ($agent->canCreateAgents() || $agent->children()->exists())
                 <a href="{{ route('agent.agents') }}" class="{{ $tab === 'agents' ? 'is-on' : '' }}">My agents</a>
             @endif

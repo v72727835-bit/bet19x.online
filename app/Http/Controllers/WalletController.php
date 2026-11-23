@@ -140,4 +140,48 @@ class WalletController extends Controller
         return redirect()->route('wallet.index')
             ->with('status', 'Withdrawal request of ₹' . number_format($amount, 2) . ' submit ho gayi. Admin approve karega tab bank me transfer hoga.');
     }
+
+    /** Send money to another player. */
+    public function transfer()
+    {
+        $wallet = Wallet::firstOrCreate(['user_id' => Auth::id()]);
+
+        return view('wallet.transfer', compact('wallet'));
+    }
+
+    /** Shows whose account a user ID / email / phone belongs to before sending (name partly hidden). */
+    public function transferLookup(Request $request)
+    {
+        $user = \App\Services\WalletTransfer::findUser($request->query('to'));
+        if (! $user || $user->id === Auth::id()) {
+            return response()->json(['found' => false]);
+        }
+        $parts = preg_split('/\s+/', trim($user->name));
+        $masked = collect($parts)->map(fn ($p, $i) => $i === 0 ? $p : mb_substr($p, 0, 1) . '.')->implode(' ');
+
+        return response()->json(['found' => true, 'id' => $user->id, 'name' => $masked, 'blocked' => (bool) $user->is_blocked]);
+    }
+
+    public function storeTransfer(Request $request)
+    {
+        $data = $request->validate([
+            'to' => 'required|max:255',
+            'amount' => 'required|numeric|min:' . \App\Services\WalletTransfer::MIN . '|max:1000000',
+            'note' => 'nullable|string|max:120',
+        ]);
+
+        $to = \App\Services\WalletTransfer::findUser($data['to']);
+        if (! $to) {
+            return back()->withInput()->with('error', 'Is user ID / email / phone ka koi player nahi mila.');
+        }
+
+        try {
+            $ref = \App\Services\WalletTransfer::send(Auth::user(), $to, (float) $data['amount'], 'player', $data['note'] ?? null);
+        } catch (\DomainException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        }
+
+        return redirect()->route('wallet.index')
+            ->with('status', '₹' . number_format((float) $data['amount'], 2) . " {$to->name} (#{$to->id}) ko bhej diye. Ref {$ref}");
+    }
 }

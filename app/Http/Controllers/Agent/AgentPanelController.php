@@ -150,13 +150,14 @@ class AgentPanelController extends Controller
             $sids = in_array((string) $pid, $sids, true) ? [(string) $pid] : ['-'];
         }
         $q = AstechBetLog::whereIn('user_id', $sids)->when($from, fn ($w) => $w->where('created_at', '>=', $from));
-        $totals = (clone $q)->where('rolled_back', false)->selectRaw('COUNT(*) as rounds, COALESCE(SUM(bet),0) as bet, COALESCE(SUM(win),0) as win')->first();
-        $bets = $q->latest('id')->paginate(40)->withQueryString();
-        $users = User::whereIn('id', $bets->pluck('user_id')->unique()->all() ?: [0])->get(['id', 'name', 'email'])->keyBy('id');
+        $totals = \App\Services\BetRounds::totals($q);
+        $players = \App\Services\BetRounds::perPlayer($q, 25);
+        $bets = \App\Services\BetRounds::paginate($q, 40);
+        $users = User::whereIn('id', collect($bets->items())->pluck('user_id')->merge($players->pluck('user_id'))->unique()->all() ?: [0])->get(['id', 'name', 'email'])->keyBy('id');
         $games = $bets->isEmpty() ? [] : GameCatalog::lookup();
         $rate = (float) $agent->commission_rate / 100;
 
-        return view('agent.bets', $this->common($request, 'bets', $rangeKey) + compact('bets', 'totals', 'users', 'games', 'rate'));
+        return view('agent.bets', $this->common($request, 'bets', $rangeKey) + compact('bets', 'totals', 'users', 'games', 'rate', 'players'));
     }
 
     public function deposits(Request $request)
@@ -358,5 +359,46 @@ class AgentPanelController extends Controller
         \App\Models\AuditLog::record('Agent Panel', $child->is_active ? 'Agent Activated Agent' : 'Agent Deactivated Agent', "{$me->name} (#{$me->id}) -> {$child->email}");
 
         return back()->with('status', $child->name . ($child->is_active ? ' active ho gaya.' : ' deactivate ho gaya.'));
+    }
+
+    /** Agent moves money between two players of its own network. */
+    public function transferForm(Request $request)
+    {
+        $agent = $this->agent($request);
+        [$from, $rangeKey] = $this->range($request, '30d');
+        $players = User::whereIn('agent_id', $agent->scopeIds())->with('wallet')->orderBy('name')->limit(1000)->get(['id', 'name', 'email', 'agent_id']);
+        $recent = \App\Models\WalletTransaction::with('wallet.user')->where('type', 'transfer_out')
+            ->whereHas('wallet', fn ($q) => $q->whereIn('user_id', $players->pluck('id')->all() ?: [0]))
+            ->latest()->take(20)->get();
+
+        return view('agent.transfer', $this->common($request, 'transfer', $rangeKey) + compact('players', 'recent'));
+    }
+
+    public function transfer(Request $request)
+    {
+        $agent = $this->agent($request);
+        $data = $request->validate([
+            'from' => 'required|max:255',
+            'to' => 'required|max:255',
+            'amount' => 'required|numeric|min:' . \App\Services\WalletTransfer::MIN,
+            'note' => 'nullable|string|max:120',
+        ]);
+
+        $scope = $agent->scopeIds();
+        $from = \App\Services\WalletTransfer::findUser($data['from']);
+        $to = \App\Services\WalletTransfer::findUser($data['to']);
+        if (! $from || ! in_array((int) $from->agent_id, $scope, true) || ! $to || ! in_array((int) $to->agent_id, $scope, true)) {
+            return back()->withInput()->withErrors(['from' => 'Dono players aapke network ke hone chahiye.']);
+        }
+
+        try {
+            $ref = \App\Services\WalletTransfer::send($from, $to, (float) $data['amount'], "agent {$agent->name}", $data['note'] ?? null);
+        } catch (\DomainException $e) {
+            return back()->withInput()->withErrors(['amount' => $e->getMessage()]);
+        }
+
+        \App\Models\AuditLog::record('Agent Panel', 'Agent Transfer', "{$agent->name} (#{$agent->id}) moved ₹{$data['amount']} from #{$from->id} to #{$to->id} [{$ref}]");
+
+        return back()->with('status', '₹' . number_format((float) $data['amount'], 2) . " {$from->name} se {$to->name} ko transfer ho gaye. Ref {$ref}");
     }
 }

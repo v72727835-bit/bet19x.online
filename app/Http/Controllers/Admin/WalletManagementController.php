@@ -217,4 +217,39 @@ class WalletManagementController extends Controller
 
         return view('admin.wallet.transactions', compact('transactions'));
     }
+
+    /** Admin moves money from one player's wallet to another's. */
+    public function transferForm(Request $request)
+    {
+        $recent = WalletTransaction::with('wallet.user')->where('type', 'transfer_out')->latest()->take(20)->get();
+
+        return view('admin.wallet.transfer', compact('recent'));
+    }
+
+    public function transfer(Request $request)
+    {
+        $data = $request->validate([
+            'from' => 'required|max:255',
+            'to' => 'required|max:255',
+            'amount' => 'required|numeric|min:' . \App\Services\WalletTransfer::MIN,
+            'reason' => 'required|string|max:120',
+        ]);
+
+        $from = \App\Services\WalletTransfer::findUser($data['from']);
+        $to = \App\Services\WalletTransfer::findUser($data['to']);
+        if (! $from || ! $to) {
+            return back()->withInput()->withErrors(['from' => (! $from ? 'Bhejne wala' : 'Paane wala') . ' player nahi mila (user ID, email ya phone check karein).']);
+        }
+
+        $admin = auth('admin')->user();
+        try {
+            $ref = \App\Services\WalletTransfer::send($from, $to, (float) $data['amount'], 'admin ' . $admin->name, $data['reason']);
+        } catch (\DomainException $e) {
+            return back()->withInput()->withErrors(['amount' => $e->getMessage()]);
+        }
+
+        AuditLog::record('Wallet Management', 'Transfer', "₹{$data['amount']} from #{$from->id} ({$from->email}) to #{$to->id} ({$to->email}) — {$data['reason']} [{$ref}]");
+
+        return back()->with('status', '₹' . number_format((float) $data['amount'], 2) . " {$from->name} se {$to->name} ko transfer ho gaye. Ref {$ref}");
+    }
 }
