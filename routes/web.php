@@ -101,6 +101,7 @@ Route::prefix('agent')->name('agent.')->group(function () {
         Route::get('/profit-loss', [App\Http\Controllers\Agent\AgentPanelController::class, 'profitLoss'])->name('profit-loss');
         Route::get('/transfer', [App\Http\Controllers\Agent\AgentPanelController::class, 'transferForm'])->name('transfer');
         Route::post('/transfer', [App\Http\Controllers\Agent\AgentPanelController::class, 'transfer'])->middleware('throttle:20,1')->name('transfer.store');
+        Route::post('/transfer-master', [App\Http\Controllers\Agent\AgentPanelController::class, 'transferToMaster'])->middleware('throttle:20,1')->name('transfer.master');
         Route::post('/agents', [App\Http\Controllers\Agent\AgentPanelController::class, 'storeAgent'])->name('agents.store');
         Route::post('/agents/{child}/update', [App\Http\Controllers\Agent\AgentPanelController::class, 'updateAgent'])->name('agents.update');
         Route::post('/agents/{child}/toggle', [App\Http\Controllers\Agent\AgentPanelController::class, 'toggleAgent'])->name('agents.toggle');

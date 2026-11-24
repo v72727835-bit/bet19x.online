@@ -231,6 +231,11 @@
                     <span class="fx-label">Master Agent / Agent / Sub-Agent</span>
                     <span class="fx-tooltip">Agents</span>
                 </a>
+                <a href="{{ route('admin.agents.transfer') }}" class="fx-nav-link {{ request()->routeIs('admin.agents.transfer*') ? 'active' : '' }}">
+                    <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 8h13l-3-3m6 11H7l3 3"/></svg>
+                    <span class="fx-label">Master to master transfer</span>
+                    <span class="fx-tooltip">Master to master transfer</span>
+                </a>
                 @endif
 
                 @if($fxAdmin?->hasPermission('wallet'))

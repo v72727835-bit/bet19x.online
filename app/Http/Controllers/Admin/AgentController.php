@@ -153,4 +153,38 @@ class AgentController extends Controller
 
         return redirect()->route('admin.agents.index')->with('status', 'Agent delete ho gaya.');
     }
+
+    /** Admin moves credit or commission balance between agents (e.g. master to master). */
+    public function transferForm(Request $request)
+    {
+        $agents = Agent::orderByRaw("CASE role WHEN 'master_agent' THEN 0 WHEN 'agent' THEN 1 ELSE 2 END")->orderBy('name')->get();
+        $history = \App\Services\AgentTransfer::history();
+
+        return view('admin.agents.transfer', compact('agents', 'history'));
+    }
+
+    public function transfer(Request $request)
+    {
+        $data = $request->validate([
+            'from_id' => 'required|integer|different:to_id',
+            'to_id' => 'required|integer',
+            'kind' => 'required|in:' . implode(',', array_keys(\App\Services\AgentTransfer::KINDS)),
+            'amount' => 'required|numeric|min:' . \App\Services\AgentTransfer::MIN,
+            'reason' => 'required|string|max:120',
+        ], ['from_id.different' => 'Bhejne wala aur paane wala agent alag hone chahiye.']);
+
+        $from = Agent::find($data['from_id']);
+        $to = Agent::find($data['to_id']);
+        if (! $from || ! $to) {
+            return back()->withInput()->withErrors(['from_id' => 'Agent nahi mila.']);
+        }
+
+        try {
+            $ref = \App\Services\AgentTransfer::send($from, $to, (float) $data['amount'], $data['kind'], 'admin ' . auth('admin')->user()->name, $data['reason']);
+        } catch (\DomainException $e) {
+            return back()->withInput()->withErrors(['amount' => $e->getMessage()]);
+        }
+
+        return back()->with('status', '₹' . number_format((float) $data['amount'], 2) . ' ' . strtolower(\App\Services\AgentTransfer::KINDS[$data['kind']]) . " {$from->name} se {$to->name} ko transfer ho gaya. Ref {$ref}");
+    }
 }
