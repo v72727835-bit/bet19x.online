@@ -371,12 +371,9 @@ class AgentPanelController extends Controller
             ->whereHas('wallet', fn ($q) => $q->whereIn('user_id', $players->pluck('id')->all() ?: [0]))
             ->latest()->take(20)->get();
 
-        $masters = $agent->role === 'master_agent'
-            ? Agent::where('role', 'master_agent')->where('is_active', true)->where('id', '!=', $agent->id)->orderBy('name')->get(['id', 'name'])
-            : collect();
         $agentHistory = \App\Services\AgentTransfer::history([$agent->id], 20);
 
-        return view('agent.transfer', $this->common($request, 'transfer', $rangeKey) + compact('players', 'recent', 'masters', 'agentHistory'));
+        return view('agent.transfer', $this->common($request, 'transfer', $rangeKey) + compact('players', 'recent', 'agentHistory'));
     }
 
     public function transfer(Request $request)
@@ -407,30 +404,44 @@ class AgentPanelController extends Controller
         return back()->with('status', '₹' . number_format((float) $data['amount'], 2) . " {$from->name} se {$to->name} ko transfer ho gaye. Ref {$ref}");
     }
 
-    /** A master agent sends credit or commission balance to another master agent. */
-    public function transferToMaster(Request $request)
+    /** Looks up an agent by its unique code so the sender can confirm who will receive the money. */
+    public function agentLookup(Request $request)
     {
         $me = $this->agent($request);
-        abort_unless($me->role === 'master_agent', 403, 'Sirf master agent doosre master ko transfer kar sakta hai.');
+        $to = Agent::findByReferralCode($request->query('code'));
+        if (! $to || $to->id === $me->id) {
+            return response()->json(['found' => false]);
+        }
+
+        return response()->json(['found' => true, 'name' => $to->name, 'type' => $to->roleLabel(), 'code' => $to->referralCode()]);
+    }
+
+    /** Any agent (master, distributor, retailer) sends credit or commission balance to another agent by its code. */
+    public function transferToAgent(Request $request)
+    {
+        $me = $this->agent($request);
 
         $data = $request->validate([
-            'to_id' => 'required|integer',
+            'code' => 'required|string|max:20',
             'kind' => 'required|in:' . implode(',', array_keys(\App\Services\AgentTransfer::KINDS)),
             'amount' => 'required|numeric|min:' . \App\Services\AgentTransfer::MIN,
             'note' => 'nullable|string|max:120',
         ]);
 
-        $to = Agent::where('id', $data['to_id'])->where('role', 'master_agent')->first();
-        if (! $to || $to->id === $me->id) {
-            return back()->withInput()->withErrors(['to_id' => 'Doosra master agent chuniye.']);
+        $to = Agent::findByReferralCode($data['code']);
+        if (! $to) {
+            return back()->withInput()->withErrors(['code' => 'Is agent code ka koi active agent nahi mila. Code dobara check karein.']);
+        }
+        if ($to->id === $me->id) {
+            return back()->withInput()->withErrors(['code' => 'Ye aapka apna code hai.']);
         }
 
         try {
-            $ref = \App\Services\AgentTransfer::send($me, $to, (float) $data['amount'], $data['kind'], "master {$me->name}", $data['note'] ?? null);
+            $ref = \App\Services\AgentTransfer::send($me, $to, (float) $data['amount'], $data['kind'], "{$me->roleLabel()} {$me->name}", $data['note'] ?? null);
         } catch (\DomainException $e) {
             return back()->withInput()->withErrors(['amount' => $e->getMessage()]);
         }
 
-        return back()->with('status', '₹' . number_format((float) $data['amount'], 2) . ' ' . strtolower(\App\Services\AgentTransfer::KINDS[$data['kind']]) . " {$to->name} ko bhej diya. Ref {$ref}");
+        return back()->with('status', '₹' . number_format((float) $data['amount'], 2) . ' ' . strtolower(\App\Services\AgentTransfer::KINDS[$data['kind']]) . " {$to->name} ({$to->roleLabel()}) ko bhej diya. Ref {$ref}");
     }
 }
