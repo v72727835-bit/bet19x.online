@@ -1,4 +1,4 @@
-<x-admin-layout title="Master to master transfer">
+<x-admin-layout title="Agent to agent transfer">
     <a href="{{ route('admin.agents.index') }}" class="fx-muted text-sm">&larr; All agents</a>
 
     <form method="POST" action="{{ route('admin.agents.transfer.store') }}" class="fx-card p-5 mt-4 max-w-3xl grid grid-cols-1 sm:grid-cols-2 gap-4"
@@ -14,7 +14,7 @@
                 <option value="">Choose agent</option>
                 @foreach($agents as $a)
                     <option value="{{ $a->id }}" @selected((string) old('from_id', request('from')) === (string) $a->id)>
-                        {{ $a->name }} ({{ $a->roleLabel() }}) — credit free ₹{{ number_format(max(0, $a->creditAvailable()), 0) }}, balance ₹{{ number_format($a->wallet_balance, 0) }}{{ $a->is_active ? '' : ' — inactive' }}
+                        {{ $a->name }} ({{ $a->roleLabel() }}, {{ $a->referralCode() }}) — credit free ₹{{ number_format(max(0, $a->creditAvailable()), 0) }}, balance ₹{{ number_format($a->wallet_balance, 0) }}{{ $a->is_active ? '' : ' — inactive' }}
                     </option>
                 @endforeach
             </select>
@@ -25,7 +25,7 @@
                 <option value="">Choose agent</option>
                 @foreach($agents as $a)
                     <option value="{{ $a->id }}" @selected((string) old('to_id') === (string) $a->id) @disabled(! $a->is_active)>
-                        {{ $a->name }} ({{ $a->roleLabel() }}){{ $a->is_active ? '' : ' — inactive' }}
+                        {{ $a->name }} ({{ $a->roleLabel() }}, {{ $a->referralCode() }}){{ $a->is_active ? '' : ' — inactive' }}
                     </option>
                 @endforeach
             </select>

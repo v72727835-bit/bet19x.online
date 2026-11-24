@@ -24,7 +24,7 @@ class AgentTransferTest extends TestCase
     public function test_admin_page_opens_and_is_not_shadowed_by_agent_show_route(): void
     {
         $this->agent('Alpha');
-        $this->actingAs($this->admin(), 'admin')->get('/admin/agents/transfer')->assertOk()->assertSee('Master to master transfer')->assertSee('Alpha');
+        $this->actingAs($this->admin(), 'admin')->get('/admin/agents/transfer')->assertOk()->assertSee('Agent to agent transfer')->assertSee('Alpha');
         $this->actingAs($this->admin(), 'admin')->get('/admin/agents')->assertOk()->assertSee(route('admin.agents.transfer'));
     }
 
@@ -73,32 +73,75 @@ class AgentTransferTest extends TestCase
         $this->assertEquals(0, (float) $off->fresh()->wallet_balance);
     }
 
-    public function test_master_sends_to_another_master_from_its_panel(): void
+    public function test_master_sends_to_another_agent_by_code_from_its_panel(): void
     {
         $a = $this->agent('Alpha', 'master_agent', 1000);
         $b = $this->agent('Beta', 'master_agent', 0);
 
-        $this->actingAs($a, 'agent')->get('/agent/transfer')->assertOk()->assertSee('Send to another master')->assertSee('Beta');
-        $this->actingAs($a, 'agent')->post('/agent/transfer-master', ['to_id' => $b->id, 'kind' => 'credit', 'amount' => 250])->assertRedirect()->assertSessionHas('status');
+        $this->actingAs($a, 'agent')->get('/agent/transfer')->assertOk()->assertSee('Send to an agent')->assertSee($a->referralCode());
+        $this->actingAs($a, 'agent')->post('/agent/transfer-agent', ['code' => strtolower($b->referralCode()), 'kind' => 'credit', 'amount' => 250])
+            ->assertRedirect()->assertSessionHas('status');
 
         $this->assertEquals(750, (float) $a->fresh()->credit_limit);
         $this->assertEquals(250, (float) $b->fresh()->credit_limit);
         $this->actingAs($b, 'agent')->get('/agent/transfer')->assertSee('Your agent transfers')->assertSee('+₹250.00', false);
     }
 
-    public function test_only_masters_can_send_and_only_to_masters(): void
+    public function test_distributor_and_retailer_can_send_too_in_every_direction(): void
     {
         $master = $this->agent('Alpha', 'master_agent', 1000);
-        $agent = $this->agent('Dist', 'agent', 1000);
-        $other = $this->agent('Beta', 'master_agent');
+        $dist = $this->agent('Dist', 'agent', 1000);
+        $retail = $this->agent('Retail', 'sub_agent', 1000);
 
-        $this->actingAs($agent, 'agent')->post('/agent/transfer-master', ['to_id' => $other->id, 'kind' => 'credit', 'amount' => 10])->assertForbidden();
-        $this->actingAs($agent, 'agent')->get('/agent/transfer')->assertOk()->assertDontSee('Send to another master');
+        $this->actingAs($dist, 'agent')->get('/agent/transfer')->assertOk()->assertSee('Send to an agent');
+        $this->actingAs($retail, 'agent')->get('/agent/transfer')->assertOk()->assertSee('Send to an agent');
 
-        $this->actingAs($master, 'agent')->post('/agent/transfer-master', ['to_id' => $agent->id, 'kind' => 'credit', 'amount' => 10])->assertSessionHasErrors('to_id');
-        $this->actingAs($master, 'agent')->post('/agent/transfer-master', ['to_id' => $master->id, 'kind' => 'credit', 'amount' => 10])->assertSessionHasErrors('to_id');
-        $this->assertEquals(1000, (float) $master->fresh()->credit_limit);
-        $this->assertEquals(1000, (float) $agent->fresh()->credit_limit);
+        $this->actingAs($dist, 'agent')->post('/agent/transfer-agent', ['code' => $master->referralCode(), 'kind' => 'credit', 'amount' => 100])->assertSessionHas('status');   // up
+        $this->actingAs($master, 'agent')->post('/agent/transfer-agent', ['code' => $retail->referralCode(), 'kind' => 'credit', 'amount' => 50])->assertSessionHas('status');  // down, skipping a level
+        $this->actingAs($retail, 'agent')->post('/agent/transfer-agent', ['code' => $dist->referralCode(), 'kind' => 'credit', 'amount' => 25])->assertSessionHas('status');    // sideways/up
+
+        $this->assertEquals(1000 + 100 - 50, (float) $master->fresh()->credit_limit);   // got 100 from dist, sent 50 to retail
+        $this->assertEquals(1000 - 100 + 25, (float) $dist->fresh()->credit_limit);     // sent 100 to master, got 25 from retail
+        $this->assertEquals(1000 + 50 - 25, (float) $retail->fresh()->credit_limit);    // got 50 from master, sent 25 to dist
+    }
+
+    public function test_code_lookup_shows_who_will_receive(): void
+    {
+        $a = $this->agent('Alpha');
+        $b = $this->agent('Beta', 'agent');
+        $off = $this->agent('Gamma', 'master_agent', 0, 0, 0, false);
+
+        $this->actingAs($a, 'agent')->getJson('/agent/transfer-agent/lookup?code=' . $b->referralCode())->assertJson(['found' => true, 'name' => 'Beta', 'type' => 'Agent']);
+        $this->actingAs($a, 'agent')->getJson('/agent/transfer-agent/lookup?code=' . $a->referralCode())->assertJson(['found' => false]);   // own code
+        $this->actingAs($a, 'agent')->getJson('/agent/transfer-agent/lookup?code=' . $off->referralCode())->assertJson(['found' => false]); // inactive
+        $this->actingAs($a, 'agent')->getJson('/agent/transfer-agent/lookup?code=BXNOPE')->assertJson(['found' => false]);
+    }
+
+    public function test_bad_code_own_code_and_limits_are_refused_without_moving_money(): void
+    {
+        $a = $this->agent('Alpha', 'master_agent', 1000, 900);
+        $b = $this->agent('Beta', 'agent', 0);
+
+        $this->actingAs($a, 'agent')->post('/agent/transfer-agent', ['code' => 'BXZZZZ', 'kind' => 'credit', 'amount' => 10])->assertSessionHasErrors('code');
+        $this->actingAs($a, 'agent')->post('/agent/transfer-agent', ['code' => $a->referralCode(), 'kind' => 'credit', 'amount' => 10])->assertSessionHasErrors('code');
+        $this->actingAs($a, 'agent')->post('/agent/transfer-agent', ['code' => $b->referralCode(), 'kind' => 'credit', 'amount' => 200])->assertSessionHasErrors('amount'); // only 100 free
+
+        $this->assertEquals(1000, (float) $a->fresh()->credit_limit);
+        $this->assertEquals(0, (float) $b->fresh()->credit_limit);
+        $this->assertSame(0, AuditLog::where('module', 'Agent Transfer')->count());
+    }
+
+    public function test_guest_cannot_transfer_or_look_up_agents(): void
+    {
+        $this->post('/agent/transfer-agent', ['code' => 'BX1', 'kind' => 'credit', 'amount' => 1])->assertRedirect(route('agent.login'));
+        $this->getJson('/agent/transfer-agent/lookup?code=BX1')->assertUnauthorized();
+    }
+
+    public function test_admin_lists_show_each_agents_code(): void
+    {
+        $a = $this->agent('Alpha');
+        $this->actingAs($this->admin(), 'admin')->get('/admin/agents')->assertOk()->assertSee($a->referralCode());
+        $this->actingAs($this->admin(), 'admin')->get('/admin/agents/transfer')->assertOk()->assertSee($a->referralCode());
     }
 
     public function test_sub_admin_without_agents_permission_cannot_open_it(): void

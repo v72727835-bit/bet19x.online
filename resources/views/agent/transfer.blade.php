@@ -2,8 +2,8 @@
 @section('title', 'Transfer')
 @section('content')
     <div class="bx-pagehead">
-        <h1 class="bx-h1">Transfer between players</h1>
-        <p class="bx-sub">Move money from one of your players to another. Both players must be in your network.</p>
+        <h1 class="bx-h1">Transfer</h1>
+        <p class="bx-sub">Send credit or commission balance to another agent with their agent code, or move money between two of your players.</p>
     </div>
 
     <datalist id="ag-players">
@@ -12,7 +12,8 @@
         @endforeach
     </datalist>
 
-    <form method="POST" action="{{ route('agent.transfer.store') }}" class="bx-panel" style="margin-top:12px; max-width:620px;"
+    <div class="bx-section-head" style="margin-top:18px;"><h2 class="bx-h2">Between your players</h2></div>
+    <form method="POST" action="{{ route('agent.transfer.store') }}" class="bx-panel" style="margin-top:0; max-width:620px;"
           onsubmit="return confirm('Transfer ₹' + this.amount.value + ' now?');">
         @csrf
         <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:10px;">
@@ -25,40 +26,53 @@
         <p class="bx-sub" style="margin-top:8px;">Taken from the sender's deposit balance first, then winnings; the receiver gets it as deposit balance.</p>
     </form>
 
-    @if ($agent->role === 'master_agent')
-        <section class="bx-section">
-            <div class="bx-section-head"><h2 class="bx-h2">Send to another master</h2></div>
-            <form method="POST" action="{{ route('agent.transfer.master') }}" class="bx-panel" style="max-width:620px;"
-                  onsubmit="return confirm('Send ₹' + this.amount.value + ' to this master now?');">
-                @csrf
-                <p class="bx-sub" style="margin:0 0 12px;">You have ₹{{ number_format(max(0, $agent->creditAvailable()), 2) }} unused credit and ₹{{ number_format($agent->wallet_balance, 2) }} commission balance.</p>
-                @if ($masters->isEmpty())
-                    <p class="bx-empty" style="padding:8px 0;">There are no other active master agents yet.</p>
-                @else
-                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:10px;">
-                        <label class="bx-field"><span>To master</span>
-                            <select class="bx-input" name="to_id" required>
-                                <option value="">Choose master</option>
-                                @foreach ($masters as $m)
-                                    <option value="{{ $m->id }}" @selected((string) old('to_id') === (string) $m->id)>{{ $m->name }} ({{ $m->referralCode() }})</option>
-                                @endforeach
-                            </select>
-                        </label>
-                        <label class="bx-field"><span>What to send</span>
-                            <select class="bx-input" name="kind">
-                                @foreach (\App\Services\AgentTransfer::KINDS as $k => $label)
-                                    <option value="{{ $k }}" @selected(old('kind', 'credit') === $k)>{{ $label }}</option>
-                                @endforeach
-                            </select>
-                        </label>
-                        <label class="bx-field"><span>Amount (₹)</span><input class="bx-input" type="number" step="1" min="{{ \App\Services\AgentTransfer::MIN }}" name="amount" value="{{ old('amount') }}" required></label>
-                        <label class="bx-field"><span>Note (optional)</span><input class="bx-input" name="note" maxlength="120" value="{{ old('note') }}"></label>
-                    </div>
-                    <button type="submit" class="bx-btn bx-btn-gold">Send to master</button>
-                @endif
-            </form>
-        </section>
-    @endif
+    {{-- Agent to agent: master, distributor and reseller can all send to any agent by its unique code --}}
+    <section class="bx-section">
+        <div class="bx-section-head"><h2 class="bx-h2">Send to an agent</h2></div>
+        <div class="bx-panel" style="max-width:620px;" x-data="{ copied: false }">
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                <div class="bx-grow">
+                    <small style="color:var(--bx-muted); font-size:13px;">Your agent code — share it so others can send to you</small>
+                    <b style="font-size:24px; letter-spacing:2px; color:var(--bx-gold);">{{ $agent->referralCode() }}</b>
+                </div>
+                <button type="button" class="bx-btn bx-btn-ghost bx-btn-sm"
+                        @click="navigator.clipboard.writeText(@js($agent->referralCode())); copied = true; setTimeout(() => copied = false, 1500)" x-text="copied ? 'Copied' : 'Copy code'">Copy code</button>
+            </div>
+            <p class="bx-sub" style="margin:10px 0 0;">You have ₹{{ number_format(max(0, $agent->creditAvailable()), 2) }} unused credit and ₹{{ number_format($agent->wallet_balance, 2) }} commission balance.</p>
+        </div>
+
+        <form method="POST" action="{{ route('agent.transfer.agent') }}" class="bx-panel" style="max-width:620px; margin-top:12px;"
+              x-data="{ code: @js(old('code', '')), who: null, checking: false, timer: null,
+                        look() { clearTimeout(this.timer); this.who = null; this.code = this.code.toUpperCase().trim(); if (this.code.length < 3) return;
+                                 this.timer = setTimeout(() => { this.checking = true;
+                                   fetch(@js(route('agent.transfer.agent.lookup')) + '?code=' + encodeURIComponent(this.code), { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
+                                     .then(r => r.json()).then(d => { this.who = d; }).catch(() => {}).finally(() => { this.checking = false; }); }, 350); } }"
+              x-init="if (code) look()"
+              onsubmit="return confirm('Send ₹' + this.amount.value + ' now? This cannot be undone.');">
+            @csrf
+            <label class="bx-field">
+                <span>Receiver's agent code</span>
+                <input class="bx-input" style="text-transform:uppercase; letter-spacing:2px; font-weight:800;" name="code" x-model="code" @input="look()" required autocomplete="off" maxlength="20" placeholder="e.g. BXS6">
+            </label>
+            <p x-show="checking" style="display:none; margin:-6px 0 12px; color:var(--bx-muted); font-size:13px;">Checking…</p>
+            <p x-show="who && who.found" style="display:none; margin:-6px 0 12px; color:var(--bx-win); font-size:14px; font-weight:700;">Sending to <span x-text="who && who.name"></span> — <span x-text="who && who.type"></span> (<span x-text="who && who.code"></span>)</p>
+            <p x-show="who && !who.found && code.length >= 3" style="display:none; margin:-6px 0 12px; color:#ff8a9a; font-size:14px; font-weight:700;">No active agent with this code.</p>
+
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:10px;">
+                <label class="bx-field"><span>What to send</span>
+                    <select class="bx-input" name="kind">
+                        @foreach (\App\Services\AgentTransfer::KINDS as $k => $label)
+                            <option value="{{ $k }}" @selected(old('kind', 'credit') === $k)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </label>
+                <label class="bx-field"><span>Amount (₹)</span><input class="bx-input" type="number" step="1" min="{{ \App\Services\AgentTransfer::MIN }}" name="amount" value="{{ old('amount') }}" required></label>
+            </div>
+            <label class="bx-field"><span>Note (optional)</span><input class="bx-input" name="note" maxlength="120" value="{{ old('note') }}"></label>
+            <button type="submit" class="bx-btn bx-btn-gold" :disabled="!(who && who.found)">Send</button>
+            <p class="bx-sub" style="margin-top:8px;">Credit: only your unused credit can move, and your credit limit goes down by the same amount.</p>
+        </form>
+    </section>
 
     @if ($agentHistory->isNotEmpty())
         <section class="bx-section">
