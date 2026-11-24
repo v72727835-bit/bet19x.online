@@ -6,6 +6,7 @@
             <p class="fx-muted text-xs">Master agents, agents and sub-agents log in here with the email and password you set for them.</p>
         </div>
         <code class="fx-input text-sm" style="user-select:all;">{{ route('agent.login') }}</code>
+        <a href="{{ route('admin.agents.transfer') }}" class="fx-btn text-xs" style="padding:.45rem .9rem;">Transfer between masters</a>
         <button type="button" class="fx-btn-outline text-xs" @click="navigator.clipboard.writeText(@js(route('agent.login'))); copied = true; setTimeout(() => copied = false, 1500)" x-text="copied ? 'Copied' : 'Copy link'">Copy link</button>
     </div>
 
