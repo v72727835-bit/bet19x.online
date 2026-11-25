@@ -3,7 +3,7 @@
 @section('content')
     <div class="bx-pagehead">
         <h1 class="bx-h1">Transfer</h1>
-        <p class="bx-sub">Send credit or commission balance to another agent with their agent code, or move money between two of your players.</p>
+        <p class="bx-sub">Send credit or commission balance to another agent with their agent code or to any player with their user ID, or move money between two of your players.</p>
     </div>
 
     <datalist id="ag-players">
@@ -73,6 +73,67 @@
             <p class="bx-sub" style="margin-top:8px;">Credit: only your unused credit can move, and your credit limit goes down by the same amount.</p>
         </form>
     </section>
+
+    {{-- Agent to player: any agent can send to any player by user ID / email / phone --}}
+    <section class="bx-section">
+        <div class="bx-section-head"><h2 class="bx-h2">Send to a player</h2></div>
+        <form method="POST" action="{{ route('agent.transfer.user') }}" class="bx-panel" style="max-width:620px;"
+              x-data="{ to: @js(old('to', '')), who: null, checking: false, timer: null,
+                        look() { clearTimeout(this.timer); this.who = null; if (this.to.trim().length < 1) return;
+                                 this.timer = setTimeout(() => { this.checking = true;
+                                   fetch(@js(route('agent.transfer.user.lookup')) + '?to=' + encodeURIComponent(this.to.trim()), { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
+                                     .then(r => r.json()).then(d => { this.who = d; }).catch(() => {}).finally(() => { this.checking = false; }); }, 350); } }"
+              x-init="if (to) look()"
+              onsubmit="return confirm('Send ₹' + this.amount.value + ' to this player now? This cannot be undone.');">
+            @csrf
+            <label class="bx-field">
+                <span>Player's user ID, email or phone</span>
+                <input class="bx-input" name="to" x-model="to" @input="look()" required autocomplete="off" maxlength="255" placeholder="e.g. 27 or player@email.com">
+            </label>
+            <p x-show="checking" style="display:none; margin:-6px 0 12px; color:var(--bx-muted); font-size:13px;">Checking…</p>
+            <p x-show="who && who.found && !who.blocked" style="display:none; margin:-6px 0 12px; color:var(--bx-win); font-size:14px; font-weight:700;">Sending to <span x-text="who && who.name"></span> (#<span x-text="who && who.id"></span>)</p>
+            <p x-show="who && who.found && who.blocked" style="display:none; margin:-6px 0 12px; color:#ff8a9a; font-size:14px; font-weight:700;">This account is blocked and can't receive money.</p>
+            <p x-show="who && !who.found" style="display:none; margin:-6px 0 12px; color:#ff8a9a; font-size:14px; font-weight:700;">No player found. Check the ID, email or phone.</p>
+
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:10px;">
+                <label class="bx-field"><span>Pay from</span>
+                    <select class="bx-input" name="kind">
+                        @foreach (\App\Services\AgentTransfer::KINDS as $k => $label)
+                            <option value="{{ $k }}" @selected(old('kind', 'credit') === $k)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </label>
+                <label class="bx-field"><span>Amount (₹)</span><input class="bx-input" type="number" step="1" min="{{ \App\Services\AgentUserTransfer::MIN }}" max="{{ \App\Services\AgentUserTransfer::MAX }}" name="amount" value="{{ old('amount') }}" required></label>
+            </div>
+            <label class="bx-field"><span>Note (optional)</span><input class="bx-input" name="note" maxlength="120" value="{{ old('note') }}"></label>
+            <button type="submit" class="bx-btn bx-btn-gold" :disabled="!(who && who.found && !who.blocked)">Send to player</button>
+            <p class="bx-sub" style="margin-top:8px;">The player gets it as deposit balance straight away. Players can also send money back to you with your agent code {{ $agent->referralCode() }}; it comes to you as credit.</p>
+        </form>
+    </section>
+
+    @if ($userHistory->isNotEmpty())
+        <section class="bx-section">
+            <div class="bx-section-head"><h2 class="bx-h2">Your player transfers</h2></div>
+            <div class="bx-panel ag-scroll" style="padding:4px;">
+                <table class="ag-table">
+                    <thead><tr><th>Time</th><th>Player</th><th>Direction</th><th>Credit / balance</th><th>Amount</th><th>By</th></tr></thead>
+                    <tbody>
+                        @foreach ($userHistory as $h)
+                            @php($in = ($h->dir ?? '') === 'user_to_agent')
+                            <tr>
+                                <td class="ag-mut">{{ $h->at?->format('d M, h:i A') }}</td>
+                                <td>{{ $h->user_name ?? '' }} (#{{ $h->user }})</td>
+                                <td>{{ $in ? 'Player → you' : 'You → player' }}</td>
+                                <td>{{ \App\Services\AgentTransfer::KINDS[$h->kind ?? ''] ?? '' }}</td>
+                                <td class="{{ $in ? 'ag-pos' : 'ag-neg' }}">{{ $in ? '+' : '−' }}₹{{ number_format((float) $h->amount, 2) }}</td>
+                                <td class="ag-mut">{{ $h->by ?? '' }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    @endif
 
     @if ($agentHistory->isNotEmpty())
         <section class="bx-section">

@@ -156,10 +156,42 @@ class WalletController extends Controller
         if (! $user || $user->id === Auth::id()) {
             return response()->json(['found' => false]);
         }
-        $parts = preg_split('/\s+/', trim($user->name));
-        $masked = collect($parts)->map(fn ($p, $i) => $i === 0 ? $p : mb_substr($p, 0, 1) . '.')->implode(' ');
+        return response()->json(['found' => true, 'id' => $user->id, 'name' => \App\Services\WalletTransfer::maskName($user->name), 'blocked' => (bool) $user->is_blocked]);
+    }
 
-        return response()->json(['found' => true, 'id' => $user->id, 'name' => $masked, 'blocked' => (bool) $user->is_blocked]);
+    /** Shows which agent an agent code belongs to before the player sends to it. */
+    public function agentLookup(Request $request)
+    {
+        $agent = \App\Models\Agent::findByReferralCode($request->query('code'));
+        if (! $agent) {
+            return response()->json(['found' => false]);
+        }
+
+        return response()->json(['found' => true, 'name' => $agent->name, 'type' => $agent->roleLabel(), 'code' => $agent->referralCode()]);
+    }
+
+    /** Player sends money from its wallet to any active agent by the agent's code. The agent gets it as credit. */
+    public function storeAgentTransfer(Request $request)
+    {
+        $data = $request->validate([
+            'code' => 'required|string|max:20',
+            'amount' => 'required|numeric|min:' . \App\Services\AgentUserTransfer::MIN . '|max:' . \App\Services\AgentUserTransfer::MAX,
+            'note' => 'nullable|string|max:120',
+        ]);
+
+        $agent = \App\Models\Agent::findByReferralCode($data['code']);
+        if (! $agent) {
+            return back()->withInput()->with('error', 'Is agent code ka koi active agent nahi mila. Code dobara check karein.');
+        }
+
+        try {
+            $ref = \App\Services\AgentUserTransfer::userToAgent(Auth::user(), $agent, (float) $data['amount'], 'credit', 'player', $data['note'] ?? null);
+        } catch (\DomainException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        }
+
+        return redirect()->route('wallet.index')
+            ->with('status', '₹' . number_format((float) $data['amount'], 2) . " agent {$agent->name} ({$agent->referralCode()}) ko bhej diye. Ref {$ref}");
     }
 
     public function storeTransfer(Request $request)

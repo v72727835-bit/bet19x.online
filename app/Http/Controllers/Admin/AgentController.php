@@ -159,8 +159,44 @@ class AgentController extends Controller
     {
         $agents = Agent::orderByRaw("CASE role WHEN 'master_agent' THEN 0 WHEN 'agent' THEN 1 ELSE 2 END")->orderBy('name')->get();
         $history = \App\Services\AgentTransfer::history();
+        $userHistory = \App\Services\AgentUserTransfer::history();
 
-        return view('admin.agents.transfer', compact('agents', 'history'));
+        return view('admin.agents.transfer', compact('agents', 'history', 'userHistory'));
+    }
+
+    /** Admin moves money between any agent and any player, in either direction. */
+    public function transferUser(Request $request)
+    {
+        $data = $request->validate([
+            'direction' => 'required|in:agent_to_user,user_to_agent',
+            'agent_id' => 'required|integer',
+            'user' => 'required|max:255',
+            'kind' => 'required|in:' . implode(',', array_keys(\App\Services\AgentTransfer::KINDS)),
+            'amount' => 'required|numeric|min:' . \App\Services\AgentUserTransfer::MIN . '|max:' . \App\Services\AgentUserTransfer::MAX,
+            'reason' => 'required|string|max:120',
+        ]);
+
+        $agent = Agent::find($data['agent_id']);
+        $user = \App\Services\WalletTransfer::findUser($data['user']);
+        if (! $agent) {
+            return back()->withInput()->withErrors(['agent_id' => 'Agent nahi mila.']);
+        }
+        if (! $user) {
+            return back()->withInput()->withErrors(['user' => 'Player nahi mila (user ID, email ya phone check karein).']);
+        }
+
+        $by = 'admin ' . auth('admin')->user()->name;
+        try {
+            $ref = $data['direction'] === 'agent_to_user'
+                ? \App\Services\AgentUserTransfer::agentToUser($agent, $user, (float) $data['amount'], $data['kind'], $by, $data['reason'])
+                : \App\Services\AgentUserTransfer::userToAgent($user, $agent, (float) $data['amount'], $data['kind'], $by, $data['reason']);
+        } catch (\DomainException $e) {
+            return back()->withInput()->withErrors(['user_amount' => $e->getMessage()]);
+        }
+
+        [$fromName, $toName] = $data['direction'] === 'agent_to_user' ? [$agent->name, $user->name] : [$user->name, $agent->name];
+
+        return back()->with('status', '₹' . number_format((float) $data['amount'], 2) . " {$fromName} se {$toName} ko transfer ho gaya. Ref {$ref}");
     }
 
     public function transfer(Request $request)

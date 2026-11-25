@@ -33,6 +33,14 @@ class WalletTransfer
         return User::where('email', strtolower($q))->orWhere('email', $q)->orWhere('phone', $q)->first();
     }
 
+    /** "Ravi Kumar Sharma" -> "Ravi K. S." so a lookup confirms the person without showing the full name. */
+    public static function maskName(?string $name): string
+    {
+        $parts = preg_split('/\s+/', trim((string) $name)) ?: [];
+
+        return collect($parts)->map(fn ($p, $i) => $i === 0 ? $p : mb_substr($p, 0, 1) . '.')->implode(' ');
+    }
+
     /**
      * @param  string  $by  who started it, for the history text: 'player', 'admin Name', 'agent Name'
      * @return string reference id

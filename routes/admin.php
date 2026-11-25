@@ -79,6 +79,7 @@ Route::prefix('admin')->group(function(){
    // must stay above agents/{agent} so 'transfer' isn't read as an agent id
    Route::get('agents/transfer',[\App\Http\Controllers\Admin\AgentController::class,'transferForm'])->name('admin.agents.transfer');
    Route::post('agents/transfer',[\App\Http\Controllers\Admin\AgentController::class,'transfer'])->name('admin.agents.transfer.store');
+   Route::post('agents/transfer-user',[\App\Http\Controllers\Admin\AgentController::class,'transferUser'])->name('admin.agents.transfer.user');
    Route::get('agents/{agent}/edit',[\App\Http\Controllers\Admin\AgentController::class,'edit'])->name('admin.agents.edit');
    Route::post('agents/{agent}/login-as',[\App\Http\Controllers\Admin\AgentController::class,'loginAs'])->name('admin.agents.login-as');
    Route::match(['DELETE','POST'],'agents/{agent}/delete',[\App\Http\Controllers\Admin\AgentController::class,'destroy'])->name('admin.agents.destroy');

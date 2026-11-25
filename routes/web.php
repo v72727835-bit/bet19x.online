@@ -39,6 +39,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/wallet/transfer', [App\Http\Controllers\WalletController::class, 'transfer'])->name('wallet.transfer');
     Route::get('/wallet/transfer/lookup', [App\Http\Controllers\WalletController::class, 'transferLookup'])->middleware('throttle:30,1')->name('wallet.transfer.lookup');
     Route::post('/wallet/transfer', [App\Http\Controllers\WalletController::class, 'storeTransfer'])->middleware('throttle:10,1')->name('wallet.transfer.store');
+    // Send money to an agent by its agent code
+    Route::get('/wallet/transfer-agent/lookup', [App\Http\Controllers\WalletController::class, 'agentLookup'])->middleware('throttle:30,1')->name('wallet.transfer.agent.lookup');
+    Route::post('/wallet/transfer-agent', [App\Http\Controllers\WalletController::class, 'storeAgentTransfer'])->middleware('throttle:10,1')->name('wallet.transfer.agent');
 
     // Bet history (every game round the player played)
     Route::get('/bets', [App\Http\Controllers\BetHistoryController::class, 'index'])->name('bets.index');
@@ -103,6 +106,8 @@ Route::prefix('agent')->name('agent.')->group(function () {
         Route::post('/transfer', [App\Http\Controllers\Agent\AgentPanelController::class, 'transfer'])->middleware('throttle:20,1')->name('transfer.store');
         Route::get('/transfer-agent/lookup', [App\Http\Controllers\Agent\AgentPanelController::class, 'agentLookup'])->middleware('throttle:30,1')->name('transfer.agent.lookup');
         Route::post('/transfer-agent', [App\Http\Controllers\Agent\AgentPanelController::class, 'transferToAgent'])->middleware('throttle:20,1')->name('transfer.agent');
+        Route::get('/transfer-user/lookup', [App\Http\Controllers\Agent\AgentPanelController::class, 'userLookup'])->middleware('throttle:30,1')->name('transfer.user.lookup');
+        Route::post('/transfer-user', [App\Http\Controllers\Agent\AgentPanelController::class, 'transferToUser'])->middleware('throttle:20,1')->name('transfer.user');
         Route::post('/agents', [App\Http\Controllers\Agent\AgentPanelController::class, 'storeAgent'])->name('agents.store');
         Route::post('/agents/{child}/update', [App\Http\Controllers\Agent\AgentPanelController::class, 'updateAgent'])->name('agents.update');
         Route::post('/agents/{child}/toggle', [App\Http\Controllers\Agent\AgentPanelController::class, 'toggleAgent'])->name('agents.toggle');

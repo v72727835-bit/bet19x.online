@@ -372,8 +372,46 @@ class AgentPanelController extends Controller
             ->latest()->take(20)->get();
 
         $agentHistory = \App\Services\AgentTransfer::history([$agent->id], 20);
+        $userHistory = \App\Services\AgentUserTransfer::history($agent->id, null, 20);
 
-        return view('agent.transfer', $this->common($request, 'transfer', $rangeKey) + compact('players', 'recent', 'agentHistory'));
+        return view('agent.transfer', $this->common($request, 'transfer', $rangeKey) + compact('players', 'recent', 'agentHistory', 'userHistory'));
+    }
+
+    /** Looks up any player by user ID / email / phone so the agent can confirm who will receive the money. */
+    public function userLookup(Request $request)
+    {
+        $user = \App\Services\WalletTransfer::findUser($request->query('to'));
+        if (! $user) {
+            return response()->json(['found' => false]);
+        }
+
+        return response()->json(['found' => true, 'id' => $user->id, 'name' => \App\Services\WalletTransfer::maskName($user->name), 'blocked' => (bool) $user->is_blocked]);
+    }
+
+    /** Any agent sends credit or commission balance to any player by user ID / email / phone. */
+    public function transferToUser(Request $request)
+    {
+        $me = $this->agent($request);
+
+        $data = $request->validate([
+            'to' => 'required|max:255',
+            'kind' => 'required|in:' . implode(',', array_keys(\App\Services\AgentTransfer::KINDS)),
+            'amount' => 'required|numeric|min:' . \App\Services\AgentUserTransfer::MIN . '|max:' . \App\Services\AgentUserTransfer::MAX,
+            'note' => 'nullable|string|max:120',
+        ]);
+
+        $to = \App\Services\WalletTransfer::findUser($data['to']);
+        if (! $to) {
+            return back()->withInput()->withErrors(['to' => 'Is user ID / email / phone ka koi player nahi mila.']);
+        }
+
+        try {
+            $ref = \App\Services\AgentUserTransfer::agentToUser($me, $to, (float) $data['amount'], $data['kind'], "agent {$me->name}", $data['note'] ?? null);
+        } catch (\DomainException $e) {
+            return back()->withInput()->withErrors(['to_amount' => $e->getMessage()]);
+        }
+
+        return back()->with('status', '₹' . number_format((float) $data['amount'], 2) . " player {$to->name} (#{$to->id}) ko bhej diye. Ref {$ref}");
     }
 
     public function transfer(Request $request)

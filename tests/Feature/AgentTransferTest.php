@@ -24,7 +24,7 @@ class AgentTransferTest extends TestCase
     public function test_admin_page_opens_and_is_not_shadowed_by_agent_show_route(): void
     {
         $this->agent('Alpha');
-        $this->actingAs($this->admin(), 'admin')->get('/admin/agents/transfer')->assertOk()->assertSee('Agent to agent transfer')->assertSee('Alpha');
+        $this->actingAs($this->admin(), 'admin')->get('/admin/agents/transfer')->assertOk()->assertSee('Agent transfer')->assertSee('Alpha');
         $this->actingAs($this->admin(), 'admin')->get('/admin/agents')->assertOk()->assertSee(route('admin.agents.transfer'));
     }
 
