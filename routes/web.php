@@ -7,6 +7,36 @@ Route::get('/', function () {
     return view('dashboard');
 });
 
+// Android app (APK) download
+Route::get('/app/download', [App\Http\Controllers\AppDownloadController::class, 'download'])->middleware('throttle:30,1')->name('app.download');
+
+// PWA manifest (dynamic so the name follows the site settings)
+Route::get('/manifest.webmanifest', function () {
+    $name = \App\Models\SiteSetting::first()?->site_name ?: 'BET19X';
+    return response()->json([
+        'name' => $name,
+        'short_name' => \Illuminate\Support\Str::limit($name, 12, ''),
+        'description' => 'Slots, live casino, crash and card games.',
+        'id' => '/',
+        'start_url' => '/dashboard?source=pwa',
+        'scope' => '/',
+        'display' => 'standalone',
+        'orientation' => 'any',
+        'background_color' => '#14070f',
+        'theme_color' => '#14070f',
+        'lang' => 'en',
+        'icons' => [
+            ['src' => '/icons/icon-192.png', 'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'any'],
+            ['src' => '/icons/icon-512.png', 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'any'],
+            ['src' => '/icons/icon-maskable-512.png', 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'maskable'],
+        ],
+        'shortcuts' => [
+            ['name' => 'Deposit', 'url' => '/wallet/deposit', 'icons' => [['src' => '/icons/icon-96.png', 'sizes' => '96x96']]],
+            ['name' => 'Wallet', 'url' => '/wallet', 'icons' => [['src' => '/icons/icon-96.png', 'sizes' => '96x96']]],
+        ],
+    ], 200, ['Content-Type' => 'application/manifest+json'], JSON_UNESCAPED_SLASHES);
+})->name('pwa.manifest');
+
 // Agent referral link: remember the code for 30 days, then send to sign-up
 Route::get('/r/{code}', function (\Illuminate\Http\Request $request, string $code) {
     $agent = App\Models\Agent::findByReferralCode($code);

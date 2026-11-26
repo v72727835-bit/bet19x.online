@@ -38,6 +38,8 @@
 
         @include('partials.wallet-bar')
 
+        @include('partials.app-download')
+
         @include('partials.astech-games')
 
         @if (isset($topWinners) && $topWinners->count())

@@ -26,3 +26,12 @@ Homestead.yaml
 .idea
 .vscode
 .DS_Store
+
+# Android app build output and local files (the signing key must never be committed)
+/android/.gradle
+/android/build
+/android/app/build
+/android/local.properties
+/android/captures
+*.jks
+*.keystore
