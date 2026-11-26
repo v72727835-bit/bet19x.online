@@ -123,6 +123,19 @@ body.bx-body {
 .bx-section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
 .bx-section-head a, .bx-link { color: var(--bx-gold); font-weight: 700; font-size: 14px; text-decoration: none; background: none; border: 0; cursor: pointer; }
 
+/* ---------- app download card ---------- */
+.bx-appcard { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; padding: 16px; border-radius: 18px;
+    background: linear-gradient(135deg, #3a0f1d 0%, var(--bx-velvet) 55%, #2a1a05 100%); box-shadow: inset 0 0 0 1px var(--bx-line), 0 8px 24px rgba(0, 0, 0, .4); }
+.bx-appcard-icon { width: 64px; height: 64px; border-radius: 16px; flex: none; box-shadow: 0 0 0 2px var(--bx-gold-2), 0 6px 16px rgba(0, 0, 0, .5); }
+.bx-appcard-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.bx-appcard-actions .bx-btn[hidden], .bx-appcard-help[hidden] { display: none; }
+.bx-appcard-actions .bx-btn { gap: 8px; }
+.bx-appcard-help { flex-basis: 100%; color: var(--bx-muted); font-size: 14px; }
+.bx-appcard-help summary { cursor: pointer; color: var(--bx-gold); font-weight: 700; }
+.bx-appcard-help ol { margin: 8px 0 0; padding-left: 20px; line-height: 1.6; }
+.bx-appcard-help b { color: var(--bx-text); }
+@media (max-width: 520px) { .bx-appcard-actions { width: 100%; } .bx-appcard-actions .bx-btn { flex: 1; } }
+
 /* ---------- search + chips ---------- */
 .bx-search { display: flex; align-items: center; gap: 8px; background: var(--bx-velvet); border-radius: 14px; padding: 0 14px; box-shadow: inset 0 0 0 1px var(--bx-line); }
 .bx-search svg { width: 18px; height: 18px; color: var(--bx-muted); flex: none; }

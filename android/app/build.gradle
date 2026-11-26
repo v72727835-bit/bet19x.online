@@ -1,0 +1,62 @@
+plugins {
+    id 'com.android.application'
+}
+
+// The site the app opens. Override with:  gradle assembleRelease -PsiteUrl=https://example.com
+def siteUrl = (project.findProperty('siteUrl') ?: 'https://bet19x.online').toString()
+def appVersionCode = (project.findProperty('appVersionCode') ?: '1').toString().toInteger()
+def appVersionName = (project.findProperty('appVersionName') ?: '1.0').toString()
+
+android {
+    namespace 'online.bet19x.app'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'online.bet19x.app'
+        minSdk 24
+        targetSdk 35
+        versionCode appVersionCode
+        versionName appVersionName
+        buildConfigField 'String', 'SITE_URL', "\"${siteUrl}\""
+        buildConfigField 'String', 'SITE_HOST', "\"${new URI(siteUrl).host}\""
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    // Lint downloads many extra jars and is not needed to produce the release APK.
+    lint {
+        checkReleaseBuilds false
+        abortOnError false
+    }
+
+    signingConfigs {
+        release {
+            // Provided by android/build-apk.sh from environment variables
+            def ks = System.getenv('BX_KEYSTORE')
+            if (ks) {
+                storeFile file(ks)
+                storePassword System.getenv('BX_STORE_PASS')
+                keyAlias System.getenv('BX_KEY_ALIAS') ?: 'bet19x'
+                keyPassword System.getenv('BX_KEY_PASS') ?: System.getenv('BX_STORE_PASS')
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (System.getenv('BX_KEYSTORE')) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

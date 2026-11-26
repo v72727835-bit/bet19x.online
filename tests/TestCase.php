@@ -94,6 +94,14 @@ abstract class TestCase extends BaseTestCase
             $t->decimal('credit_limit', 12, 2)->default(0); $t->decimal('credit_used', 12, 2)->default(0); $t->decimal('wallet_balance', 12, 2)->default(0);
             $t->boolean('is_active')->default(true); $t->timestamp('last_login_at')->nullable(); $t->timestamps();
         });
+        Schema::create('hero_banners', function (Blueprint $t) {
+            $t->id(); $t->string('image_path'); $t->string('link_url')->nullable(); $t->integer('sort_order')->default(0); $t->boolean('is_active')->default(true); $t->timestamps();
+        });
+        foreach (['site_stats' => ['icon', 'value', 'label'], 'top_winners' => ['avatar', 'name', 'contest_name', 'amount_won'], 'featured_contests' => ['title'], 'sport_categories' => ['name']] as $table => $cols) {
+            Schema::create($table, function (Blueprint $t) use ($cols) {
+                $t->id(); foreach ($cols as $c) { $t->string($c)->nullable(); } $t->integer('sort_order')->default(0); $t->boolean('is_active')->default(true); $t->timestamps();
+            });
+        }
         Schema::create('menu_items', function (Blueprint $t) {
             $t->id(); $t->string('label'); $t->string('url'); $t->integer('sort_order')->default(0); $t->boolean('is_active')->default(true); $t->timestamps();
         });
