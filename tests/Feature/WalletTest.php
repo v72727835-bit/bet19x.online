@@ -27,7 +27,8 @@ class WalletTest extends TestCase
     {
         $u = $this->user();
 
-        $this->actingAs($u)->post('/wallet/deposit', ['amount' => 500, 'payment_method' => 'upi'])
+        $pm = \App\Models\PaymentMethod::create(['title' => 'UPI', 'upi_id' => 'shop@okaxis', 'min_amount' => 100]);
+        $this->actingAs($u)->post('/wallet/deposit', ['amount' => 500, 'payment_method_id' => $pm->id, 'reference_note' => '412345678901'])
             ->assertRedirect(route('wallet.index'));
 
         $this->assertEquals(0, (float) Wallet::where('user_id', $u->id)->first()->deposit_balance);

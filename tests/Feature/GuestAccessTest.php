@@ -53,7 +53,7 @@ class GuestAccessTest extends TestCase
     {
         $this->get('/wallet/deposit')->assertRedirect(route('login'));
         $this->get('/wallet/withdraw')->assertRedirect(route('login'));
-        $this->post('/wallet/deposit', ['amount' => 500, 'payment_method' => 'upi'])->assertRedirect(route('login'));
+        $this->post('/wallet/deposit', ['amount' => 500, 'payment_method_id' => 1, 'reference_note' => '123456789012'])->assertRedirect(route('login'));
         $this->post('/wallet/withdraw', ['amount' => 500, 'bank_details' => 'x'])->assertRedirect(route('login'));
     }
 

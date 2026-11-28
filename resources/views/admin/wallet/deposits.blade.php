@@ -10,13 +10,17 @@
 
     <div class="fx-card overflow-x-auto">
         <table class="w-full fx-table">
-            <thead><tr><th>User</th><th>Amount</th><th>Method</th><th>Status</th><th>Requested</th><th>Actions</th></tr></thead>
+            <thead><tr><th>User</th><th>Amount</th><th>Paid via</th><th>UTR / proof</th><th>Status</th><th>Requested</th><th>Actions</th></tr></thead>
             <tbody>
                 @forelse($deposits as $d)
                     <tr>
                         <td>{{ $d->user->name ?? '-' }}</td>
                         <td>₹{{ number_format($d->amount, 2) }}</td>
                         <td class="fx-muted">{{ $d->method }}</td>
+                        <td class="text-sm">
+                            @if($d->reference_note)<code style="user-select:all;">{{ $d->reference_note }}</code>@else<span class="fx-muted">—</span>@endif
+                            @if($d->screenshotUrl())<div><a href="{{ $d->screenshotUrl() }}" target="_blank" rel="noopener" class="text-xs" style="color: var(--fx-amber);">View screenshot</a></div>@endif
+                        </td>
                         <td><span class="fx-badge" style="background-color: var(--fx-card-hover); color: {{ $d->status === 'approved' ? 'var(--fx-green)' : ($d->status === 'rejected' ? 'var(--fx-red)' : 'var(--fx-amber)') }};">{{ ucfirst($d->status) }}</span></td>
                         <td class="fx-muted">{{ $d->created_at->diffForHumans() }}</td>
                         <td class="space-x-1 whitespace-nowrap">
@@ -36,7 +40,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="6" class="text-center fx-muted py-6">Koi deposit request nahi mili.</td></tr>
+                    <tr><td colspan="7" class="text-center fx-muted py-6">Koi deposit request nahi mili.</td></tr>
                 @endforelse
             </tbody>
         </table>
