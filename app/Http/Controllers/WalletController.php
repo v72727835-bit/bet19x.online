@@ -34,11 +34,13 @@ class WalletController extends Controller
     }
 
     /**
-     * Show deposit form.
+     * Show deposit form: the payment details the admin has set up (UPI ID, QR, bank).
      */
     public function deposit()
     {
-        return view('wallet.deposit');
+        $methods = \App\Models\PaymentMethod::available();
+
+        return view('wallet.deposit', compact('methods'));
     }
 
     /**
@@ -49,30 +51,61 @@ class WalletController extends Controller
      */
     public function storeDeposit(Request $request)
     {
+        $methods = \App\Models\PaymentMethod::available();
+        if ($methods->isEmpty()) {
+            return redirect()->route('wallet.deposit')->with('error', 'Deposit abhi available nahi hai. Thodi der baad try karein ya support se baat karein.');
+        }
+
         $data = $request->validate([
-            'amount' => 'required|numeric|min:100|max:1000000',
-            'payment_method' => 'required|in:upi,netbanking,card,wallet',
-            'reference_note' => 'nullable|string|max:100',
+            'payment_method_id' => 'required|integer',
+            'amount' => 'required|numeric|min:1|max:10000000',
+            'reference_note' => ['required', 'string', 'min:6', 'max:40', 'regex:/^[A-Za-z0-9\-_ ]+$/'],
+            'screenshot' => 'nullable|image|mimes:png,jpg,jpeg,webp|max:4096',
+        ], [
+            'reference_note.required' => 'Payment ka UTR / transaction ID daalna zaroori hai.',
+            'reference_note.min' => 'UTR / transaction ID kam se kam 6 akshar ka hona chahiye.',
+            'reference_note.regex' => 'UTR me sirf akshar aur number ho sakte hain.',
+            'screenshot.image' => 'Screenshot ek image honi chahiye (PNG, JPG ya WebP).',
+            'screenshot.max' => 'Screenshot 4 MB se chhota hona chahiye.',
         ]);
+
+        $method = $methods->firstWhere('id', (int) $data['payment_method_id']);
+        if (! $method) {
+            return back()->withInput()->with('error', 'Ye payment option ab available nahi hai. Dusra chuniye.');
+        }
+
+        $amount = round((float) $data['amount'], 2);
+        if ($amount < (float) $method->min_amount) {
+            return back()->withInput()->withErrors(['amount' => 'Is option par kam se kam ₹' . number_format($method->min_amount, 0) . ' deposit karein.']);
+        }
+        if ($method->max_amount && $amount > (float) $method->max_amount) {
+            return back()->withInput()->withErrors(['amount' => 'Is option par zyada se zyada ₹' . number_format($method->max_amount, 0) . ' deposit ho sakta hai.']);
+        }
 
         $user = Auth::user();
 
-        $pendingCount = DepositRequest::where('user_id', $user->id)->where('status', 'pending')->count();
-        if ($pendingCount >= 5) {
+        if (DepositRequest::where('user_id', $user->id)->where('status', 'pending')->count() >= 5) {
             return redirect()->back()->withInput()
                 ->with('error', 'Aapki 5 deposit requests pehle se pending hain. Admin approval ka intezaar karein.');
         }
 
+        $utr = strtoupper(trim($data['reference_note']));
+        if (DepositRequest::where('reference_note', $utr)->whereIn('status', ['pending', 'approved'])->exists()) {
+            return back()->withInput()->withErrors(['reference_note' => 'Ye UTR pehle se use ho chuka hai. Sahi UTR daalein.']);
+        }
+
         DepositRequest::create([
             'user_id' => $user->id,
-            'amount' => round((float) $data['amount'], 2),
-            'method' => $data['payment_method'],
-            'reference_note' => $data['reference_note'] ?? null,
+            'payment_method_id' => $method->id,
+            'amount' => $amount,
+            'method' => $method->title,
+            'reference_note' => $utr,
+            'screenshot_path' => $request->hasFile('screenshot') ? $request->file('screenshot')->store('deposit-proofs', 'public') : null,
             'status' => 'pending',
         ]);
 
         return redirect()->route('wallet.index')
-            ->with('status', 'Deposit request of ₹' . number_format((float) $data['amount'], 2) . ' submit ho gayi. Admin approve karega tab paisa wallet me add hoga.');
+            ->with('status', 'Deposit request of ₹' . number_format($amount, 2) . ' submit ho gayi. Admin payment check karke approve karega, tab paisa wallet me add hoga.');
     }
 
     /**

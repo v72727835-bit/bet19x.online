@@ -61,9 +61,15 @@ abstract class TestCase extends BaseTestCase
         });
         Schema::create('deposit_requests', function (Blueprint $t) {
             $t->id(); $t->unsignedBigInteger('user_id'); $t->decimal('amount', 10, 2);
-            $t->string('method')->default('manual'); $t->string('reference_note')->nullable();
+            $t->unsignedBigInteger('payment_method_id')->nullable(); $t->string('method')->default('manual'); $t->string('reference_note')->nullable(); $t->string('screenshot_path')->nullable();
             $t->string('status')->default('pending'); $t->text('admin_remarks')->nullable();
             $t->unsignedBigInteger('processed_by')->nullable(); $t->timestamp('processed_at')->nullable(); $t->timestamps();
+        });
+        Schema::create('payment_methods', function (Blueprint $t) {
+            $t->id(); $t->string('title'); $t->string('upi_id')->nullable(); $t->string('payee_name')->nullable(); $t->string('qr_image_path')->nullable();
+            $t->string('bank_name')->nullable(); $t->string('account_holder')->nullable(); $t->string('account_number')->nullable(); $t->string('ifsc')->nullable();
+            $t->text('instructions')->nullable(); $t->decimal('min_amount', 10, 2)->default(100); $t->decimal('max_amount', 10, 2)->nullable();
+            $t->unsignedInteger('sort_order')->default(0); $t->boolean('is_active')->default(true); $t->timestamps();
         });
         Schema::create('withdrawal_requests', function (Blueprint $t) {
             $t->id(); $t->unsignedBigInteger('user_id'); $t->decimal('amount', 10, 2);

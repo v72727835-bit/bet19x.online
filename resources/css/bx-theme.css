@@ -222,6 +222,14 @@ body.bx-body {
 .bx-methods input:checked + span { box-shadow: inset 0 0 0 2px var(--bx-gold); color: var(--bx-gold); }
 .bx-methods input:focus-visible + span { outline: 2px solid var(--bx-gold); outline-offset: 2px; }
 
+/* ---------- deposit: payment details box ---------- */
+.bx-paybox { background: var(--bx-ink); border-radius: 14px; padding: 14px; box-shadow: inset 0 0 0 1px var(--bx-line); margin-bottom: 4px; }
+.bx-qr { width: 100%; max-width: 240px; aspect-ratio: 1 / 1; object-fit: contain; background: #fff; border-radius: 12px; padding: 8px; margin: 0 auto; display: block; }
+.bx-payrow { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, .06); }
+.bx-payrow:last-of-type { border-bottom: 0; }
+.bx-payrow small { display: block; color: var(--bx-muted); font-size: 12px; font-weight: 700; }
+.bx-payrow b { display: block; font-size: 17px; word-break: break-all; }
+
 /* ---------- leftover Breeze pages (profile etc.) inside the app shell ---------- */
 .bx-main .bg-white { background: var(--bx-velvet) !important; box-shadow: inset 0 0 0 1px var(--bx-line) !important; border-radius: 18px !important; }
 .bx-main .text-gray-900, .bx-main .text-gray-800 { color: var(--bx-text) !important; }

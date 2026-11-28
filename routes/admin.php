@@ -32,6 +32,12 @@ Route::prefix('admin')->group(function(){
    Route::get('game-bets',[\App\Http\Controllers\Admin\GameBetController::class,'index'])->name('admin.game-bets.index');
   });
   Route::middleware('admin.perm:wallet')->group(function(){
+   Route::get('payment-methods',[\App\Http\Controllers\Admin\PaymentMethodController::class,'index'])->name('admin.payment-methods.index');
+   Route::post('payment-methods',[\App\Http\Controllers\Admin\PaymentMethodController::class,'store'])->name('admin.payment-methods.store');
+   Route::get('payment-methods/{method}/edit',[\App\Http\Controllers\Admin\PaymentMethodController::class,'edit'])->name('admin.payment-methods.edit');
+   Route::put('payment-methods/{method}',[\App\Http\Controllers\Admin\PaymentMethodController::class,'update'])->name('admin.payment-methods.update');
+   Route::post('payment-methods/{method}/toggle',[\App\Http\Controllers\Admin\PaymentMethodController::class,'toggle'])->name('admin.payment-methods.toggle');
+   Route::delete('payment-methods/{method}',[\App\Http\Controllers\Admin\PaymentMethodController::class,'destroy'])->name('admin.payment-methods.destroy');
    Route::get('wallet/transfer',[\App\Http\Controllers\Admin\WalletManagementController::class,'transferForm'])->name('admin.wallet.transfer');
    Route::post('wallet/transfer',[\App\Http\Controllers\Admin\WalletManagementController::class,'transfer'])->name('admin.wallet.transfer.store');
    Route::match(['GET','HEAD'],'wallet/deposits',[\App\Http\Controllers\Admin\WalletManagementController::class,'deposits'])->name('admin.wallet.deposits');

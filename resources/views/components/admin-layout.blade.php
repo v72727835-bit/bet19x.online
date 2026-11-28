@@ -250,6 +250,11 @@
                     <span class="fx-label">Deposit Requests</span>
                     <span class="fx-tooltip">Deposit Requests</span>
                 </a>
+                <a href="{{ route('admin.payment-methods.index') }}" class="fx-nav-link {{ request()->routeIs('admin.payment-methods.*') ? 'active' : '' }}">
+                    <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path stroke-linecap="round" d="M14 14h3v3m4 0v4h-4m-3-1v1"/></svg>
+                    <span class="fx-label">Payment details (UPI / QR / bank)</span>
+                    <span class="fx-tooltip">Payment details</span>
+                </a>
                 @endif
                 @if($fxAdmin?->hasPermission('wallet'))
                 <a href="{{ route('admin.wallet.withdrawals') }}" class="fx-nav-link {{ request()->routeIs('admin.wallet.withdrawals') ? 'active' : '' }}">
